@@ -122,15 +122,36 @@
 
     function showStatus(msg,isError=false){statusEl.textContent=msg;statusEl.classList.toggle('error',!!isError)}
 
-    function normalizeInput(input, max){
-  let val = (input.value || "").trim().replace(",", "."); // 👈 replace comma
-  if(val === "") return;
+function normalizeInput(input, max) {
+  let val = (input.value || "").trim();
+
+  // Replace comma with dot
+  val = val.replace(",", ".");
+
+  // Remove invalid chars (keep only digits, dot, minus)
+  val = val.replace(/[^0-9.\-]/g, "");
+
+  // If multiple dots, keep only the first
+  const parts = val.split(".");
+  if (parts.length > 2) {
+    val = parts[0] + "." + parts.slice(1).join("");
+  }
+
+  // Parse to float
   let num = parseFloat(val);
-  if(isNaN(num)) return;
-  if(num > max) num = max;
-  if(num < 0) num = 0;
+  if (isNaN(num)) {
+    input.value = "";
+    return;
+  }
+
+  // Clamp value
+  if (num > max) num = max;
+  if (num < 0) num = 0;
+
+  // Update field
   input.value = num.toFixed(2);
 }
+
 
 function getLatLon(){
   const latVal = parseFloat((latEl.value || "").trim().replace(",", ".")) || 0;
@@ -160,23 +181,7 @@ function getLatLon(){
       return {az,el};
     }
 
-    function drawAz(az){
-      azCtx.clearRect(0,0,200,200);
-      azCtx.strokeStyle='black';azCtx.beginPath();azCtx.arc(100,100,80,0,2*Math.PI);azCtx.stroke();
-      azCtx.fillStyle='black';azCtx.font='12px sans-serif';
-      azCtx.fillText('0',95,15);azCtx.fillText('90',185,105);azCtx.fillText('180',90,190);azCtx.fillText('270',5,105);
-      const rad=(az-90)*Math.PI/180;azCtx.strokeStyle='blue';azCtx.beginPath();azCtx.moveTo(100,100);azCtx.lineTo(100+70*Math.cos(rad),100+70*Math.sin(rad));azCtx.stroke();
-    }
 
-    function drawEl(el){
-      elCtx.clearRect(0,0,200,200);
-      elCtx.strokeStyle='black';elCtx.beginPath();elCtx.arc(100,100,80,0,-Math.PI/2,true);elCtx.stroke();
-      elCtx.fillStyle='black';elCtx.font='12px sans-serif';elCtx.fillText('0',175,110);elCtx.fillText('45',145,55);elCtx.fillText('90',105,25);
-      if(el<0||el>90){elVal.textContent='EL=Out of range';return;}
-      elVal.textContent='EL='+el.toFixed(2);
-      const rad=el*Math.PI/180;const x=100+70*Math.cos(rad), y=100-70*Math.sin(rad);
-      elCtx.strokeStyle='blue';elCtx.beginPath();elCtx.moveTo(100,100);elCtx.lineTo(x,y);elCtx.stroke();
-    }
 
     const vesselImg=new Image();vesselImg.src="https://pgarciafer.github.io/satcalc/IMG_0585.PNG";
     function drawRel(rel){
