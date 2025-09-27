@@ -627,7 +627,7 @@ function refineBoundary(a, b, lat, lon, heading, start, stop, coarseStep, findEn
       });
 
       if(parts.length===0){
-        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1}: — No visible Sat produces blockage this zone</div>`);
+        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1} No visible Sat produces blockage here</div>`);
       } else {
         outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1} Blocking zone range:  ${parts.join(', ')}</div>`);
       }
