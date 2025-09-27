@@ -187,54 +187,65 @@
     }
     // -------------------------------------------------------------------------
 
-    function drawAz(az){
-      azCtx.clearRect(0,0,200,200);
-      azCtx.strokeStyle = 'black';
-      azCtx.beginPath();
-      azCtx.arc(100,100,80,0,2*Math.PI);
-      azCtx.stroke();
-      const rad = (az-90)*Math.PI/180;
-      azCtx.strokeStyle = 'blue';
-      azCtx.beginPath();
-      azCtx.moveTo(100,100);
-      azCtx.lineTo(100+70*Math.cos(rad),100+70*Math.sin(rad));
-      azCtx.stroke();
-    }
+function drawAz(az){
+  azCtx.clearRect(0,0,200,200);
+  azCtx.strokeStyle = 'black';
+  azCtx.beginPath();
+  azCtx.arc(100,100,80,0,2*Math.PI);
+  azCtx.stroke();
 
-    function drawEl(el){
-      elCtx.clearRect(0,0,200,200);
-      elCtx.strokeStyle = 'black';
-      elCtx.beginPath();
-      elCtx.arc(100,100,80,0,-Math.PI/2,true);
-      elCtx.stroke();
+  // Tick labels
+  azCtx.fillStyle = 'black';
+  azCtx.font = '12px sans-serif';
+  azCtx.fillText('0', 95, 15);
+  azCtx.fillText('90', 185, 105);
+  azCtx.fillText('180', 90, 190);
+  azCtx.fillText('270', 5, 105);
 
-      elCtx.fillStyle = 'black';
-      elCtx.font = '12px sans-serif';
-      elCtx.textAlign = 'center';
-      elCtx.textBaseline = 'middle';
-      // tick labels (inside the arc)
-      // 0° at right (horizon), 45° diagonal, 90° top (vertical)
-      elCtx.fillText('0', 100 + 80*Math.cos(0) - 18, 100 + 80*Math.sin(0));     // right
-      elCtx.fillText('45', 100 + 80*Math.cos(-Math.PI/4) - 18, 100 + 80*Math.sin(-Math.PI/4) - 6); // diag
-      elCtx.fillText('90', 100 + 80*Math.cos(-Math.PI/2), 100 + 80*Math.sin(-Math.PI/2) + 8); // top
+  // Arrow
+  const rad = (az-90)*Math.PI/180;
+  azCtx.strokeStyle = 'blue';
+  azCtx.beginPath();
+  azCtx.moveTo(100,100);
+  azCtx.lineTo(100+70*Math.cos(rad),100+70*Math.sin(rad));
+  azCtx.stroke();
+}
 
-      if(el<0 || el>90){
-        elVal.textContent = 'EL=Out of range';
-        return;
-      }
-      elVal.textContent = 'EL='+el.toFixed(2);
 
-      // 0° => right, 90° => up
-      const rad = el * Math.PI/180;
-      const x = 100 + 70 * Math.cos(rad);
-      const y = 100 - 70 * Math.sin(rad);
+function drawEl(el){
+  elCtx.clearRect(0,0,200,200);
+  elCtx.strokeStyle = 'black';
+  elCtx.beginPath();
+  // Bigger arc: from 0° (right) to 90° (up), centered like AZ
+  elCtx.arc(100,100,80,0,-Math.PI/2,true);
+  elCtx.stroke();
 
-      elCtx.strokeStyle = 'blue';
-      elCtx.beginPath();
-      elCtx.moveTo(100,100);
-      elCtx.lineTo(x,y);
-      elCtx.stroke();
-    }
+  // Labels (inside arc)
+  elCtx.fillStyle = 'black';
+  elCtx.font = '12px sans-serif';
+  elCtx.fillText('0', 175, 110);   // right
+  elCtx.fillText('45', 145, 55);   // diagonal up-right
+  elCtx.fillText('90', 105, 25);   // top
+
+  if(el<0 || el>90){
+    elVal.textContent = 'EL=Out of range';
+    return;
+  }
+  elVal.textContent = 'EL='+el.toFixed(2);
+
+  // Arrow: 0° = right, 90° = up
+  const rad = el * Math.PI/180;
+  const x = 100 + 70 * Math.cos(rad); 
+  const y = 100 - 70 * Math.sin(rad);
+
+  elCtx.strokeStyle = 'blue';
+  elCtx.beginPath();
+  elCtx.moveTo(100,100);
+  elCtx.lineTo(x,y);
+  elCtx.stroke();
+}
+
+
 
     function drawRel(rel){
       relCtx.clearRect(0,0,200,200);
