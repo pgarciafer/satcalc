@@ -7,25 +7,34 @@
   <style>
     :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
     body{display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:linear-gradient(180deg,#f8fafc,#eef2ff)}
-    .card{background:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.08);padding:20px;max-width:640px;width:95%;display:flex;flex-direction:column;align-items:center}
+    .card{background:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.08);padding:20px;max-width:600px;width:95%;}
     h1{font-size:18px;margin:0 0 16px;color:#0f172a;text-align:center}
-    .coords{display:flex;flex-direction:column;gap:12px;margin-top:12px;width:100%}
+    .coords{display:flex;flex-direction:column;gap:12px;margin-top:12px}
     .coord-item{display:flex;align-items:center;gap:8px;background:#f8fafc;padding:8px 12px;border-radius:8px}
     .coord-item label{width:140px;color:#0f172a;font-weight:500;}
-    .coord-item input{flex:1;text-align:center;border:2px solid #cbd5e1;background:#f1f5f9;font-size:18px;color:#0f172a;outline:none;border-radius:6px;padding:4px 6px;}
-    .coord-item input:focus{border-color:#0ea5a4;background:#ffffff;}
+    .coord-item input{flex:1;text-align:center;border:none;background:transparent;font-size:18px;color:#0f172a;outline:none;appearance:textfield;}
+    .coord-item input:focus{background:#e0f2fe;}
+    .coord-item input::-webkit-outer-spin-button,
+    .coord-item input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .coord-item select{font-size:16px;padding:4px 6px;border-radius:6px;border:1px solid #cbd5e1;background:white;color:#0f172a;}
     .muted{color:#94a3b8;font-size:13px;margin-top:12px;text-align:center}
     .actions{display:flex;gap:8px;margin-top:14px;justify-content:center}
     button{padding:8px 12px;border-radius:8px;border:0;background:#0ea5a4;color:white;cursor:pointer;font-weight:500}
     button.secondary{background:#64748b}
     .error{color:#b91c1c}
-    .diagrams{display:flex;gap:16px;margin-top:20px;justify-content:center;flex-wrap:wrap}
-    canvas{max-width:220px;width:100%;height:auto;display:block}
-    .diagram-label{text-align:center;margin-top:4px;font-size:14px;color:#0f172a;font-weight:500}
-    .relative-label{text-align:center;font-size:13px;color:#334155;margin-top:2px}
-    .not-visible{color:#b91c1c;font-weight:700}
-    .note{margin-top:8px;font-size:12px;color:#475569;text-align:center}
+    .diagrams{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;margin-top:20px}
+    .diagram{display:flex;flex-direction:column;align-items:center}
+    canvas{background:white;border-radius:8px;}
+
+    /* Responsive behavior */
+    @media (max-width: 600px){
+      .diagrams{flex-direction:column;align-items:center}
+      canvas{width:100% !important;height:auto !important;max-width:300px}
+    }
+    @media (min-width: 601px){
+      .diagrams{flex-direction:row;justify-content:space-around}
+      canvas{width:180px;height:180px}
+    }
   </style>
 </head>
 <body>
@@ -35,25 +44,34 @@
     <div class="coords" aria-live="polite">
       <div class="coord-item">
         <label for="lat">Latitude</label>
-        <input id="lat" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" />
-        <select id="latDir"><option value="N">N</option><option value="S">S</option></select>
+        <input id="lat" type="text" inputmode="decimal" placeholder="0.00" />
+        <select id="latDir">
+          <option value="N">N</option>
+          <option value="S">S</option>
+        </select>
       </div>
 
       <div class="coord-item">
         <label for="lon">Longitude</label>
-        <input id="lon" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" />
-        <select id="lonDir"><option value="E">E</option><option value="W">W</option></select>
+        <input id="lon" type="text" inputmode="decimal" placeholder="0.00" />
+        <select id="lonDir">
+          <option value="E">E</option>
+          <option value="W">W</option>
+        </select>
       </div>
 
       <div class="coord-item">
         <label for="satLon">Satellite Longitude</label>
-        <input id="satLon" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" value="18.00" />
-        <select id="satLonDir"><option value="E">E</option><option value="W">W</option></select>
+        <input id="satLon" type="text" inputmode="decimal" value="18.00" />
+        <select id="satLonDir">
+          <option value="E">E</option>
+          <option value="W">W</option>
+        </select>
       </div>
 
       <div class="coord-item">
         <label for="heading">Heading</label>
-        <input id="heading" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" />
+        <input id="heading" type="text" inputmode="decimal" value="0.00" />
       </div>
     </div>
 
@@ -62,285 +80,249 @@
       <button id="copyBtn" class="secondary" disabled>Copy</button>
     </div>
 
-    <div class="diagrams">
-      <div>
-        <canvas id="azCanvas" width="220" height="220"></canvas>
-        <div class="diagram-label" id="azLabel">Azimuth: --</div>
-        <div class="relative-label" id="relLabel">Relative to heading: --</div>
-      </div>
-      <div>
-        <canvas id="elCanvas" width="220" height="220"></canvas>
-        <div class="diagram-label" id="elLabel">Elevation: --</div>
-      </div>
-    </div>
-
-    <div class="note">If Elevation &lt; 0, the satellite is below the horizon and not visible.</div>
     <div class="muted" id="status">Waiting for location permission...</div>
+
+    <div class="diagrams">
+      <div class="diagram"><div id="azVal">AZ=</div><canvas id="azCanvas" width="200" height="200"></canvas></div>
+      <div class="diagram"><div id="elVal">EL=</div><canvas id="elCanvas" width="200" height="200"></canvas></div>
+      <div class="diagram"><div id="relVal">REL=</div><canvas id="relCanvas" width="200" height="200"></canvas></div>
+    </div>
   </div>
 
   <script>
-    // elements
     const latEl = document.getElementById('lat');
     const lonEl = document.getElementById('lon');
-    const satLonEl = document.getElementById('satLon');
-    const headingEl = document.getElementById('heading');
     const latDir = document.getElementById('latDir');
     const lonDir = document.getElementById('lonDir');
+    const satLonEl = document.getElementById('satLon');
     const satLonDir = document.getElementById('satLonDir');
+    const headingEl = document.getElementById('heading');
+    const statusEl = document.getElementById('status');
     const refreshBtn = document.getElementById('refreshBtn');
     const copyBtn = document.getElementById('copyBtn');
-    const statusEl = document.getElementById('status');
+
+    const azVal = document.getElementById('azVal');
+    const elVal = document.getElementById('elVal');
+    const relVal = document.getElementById('relVal');
 
     const azCanvas = document.getElementById('azCanvas');
     const elCanvas = document.getElementById('elCanvas');
+    const relCanvas = document.getElementById('relCanvas');
     const azCtx = azCanvas.getContext('2d');
     const elCtx = elCanvas.getContext('2d');
-    const azLabel = document.getElementById('azLabel');
-    const elLabel = document.getElementById('elLabel');
-    const relLabel = document.getElementById('relLabel');
+    const relCtx = relCanvas.getContext('2d');
 
-    // constants & helpers
-    const a = 6378.137; // WGS-84 semi-major axis (km)
-    const e2 = 0.00669437999014; // WGS-84 eccentricity^2
-    const Rs = 42164.0; // GEO orbit radius (km)
-    const deg2rad = d => d * Math.PI / 180;
-    const rad2deg = r => r * 180 / Math.PI;
-
-    // parse / normalize helpers
-    function normalizeInput(input, max) {
-      let v = input.value.replace(',', '.');
-      if (v === '') return;
-      let n = parseFloat(v);
-      if (isNaN(n)) return;
-      if (max !== null) {
-        if (n > max) n = max;
-        if (n < 0) n = 0;
-      }
-      input.value = n.toFixed(2);
+    function showStatus(msg, isError=false){
+      statusEl.textContent = msg;
+      statusEl.classList.toggle('error', !!isError);
     }
 
-    function setLatLon(lat, lon) {
-      if (lat >= 0) { latDir.value = 'N'; latEl.value = Math.min(90, Math.abs(lat)).toFixed(2); }
-      else { latDir.value = 'S'; latEl.value = Math.min(90, Math.abs(lat)).toFixed(2); }
-      if (lon >= 0) { lonDir.value = 'E'; lonEl.value = Math.min(180, Math.abs(lon)).toFixed(2); }
-      else { lonDir.value = 'W'; lonEl.value = Math.min(180, Math.abs(lon)).toFixed(2); }
+    function normalizeInput(input, max){
+      let val = input.value;
+      if(val === '') return;
+      let num = parseFloat(val);
+      if(isNaN(num)) return;
+      if(num > max) num = max;
+      if(num < 0) num = 0;
+      input.value = num.toFixed(2);
     }
 
-    function getInputs() {
-      const latVal = parseFloat(latEl.value.replace(',', '.')) || 0;
-      const lonVal = parseFloat(lonEl.value.replace(',', '.')) || 0;
-      const satLonVal = parseFloat(satLonEl.value.replace(',', '.')) || 0;
-      const headingVal = parseFloat(headingEl.value.replace(',', '.')) || 0;
+    function getLatLon(){
+      const latVal = parseFloat(latEl.value) || 0;
+      const lonVal = parseFloat(lonEl.value) || 0;
+      const satLonVal = parseFloat(satLonEl.value) || 0;
+      const headingVal = parseFloat(headingEl.value) || 0;
       const lat = latDir.value === 'N' ? latVal : -latVal;
       const lon = lonDir.value === 'E' ? lonVal : -lonVal;
       const satLon = satLonDir.value === 'E' ? satLonVal : -satLonVal;
-      return { lat, lon, satLon, heading: ((headingVal % 360) + 360) % 360 };
+      return { lat, lon, satLon, heading: headingVal };
     }
 
-    // Geodetic (lat,lon,h) -> ECEF
-    function geodeticToEcef(latDeg, lonDeg, h = 0) {
-      const φ = deg2rad(latDeg);
-      const λ = deg2rad(lonDeg);
-      const sinφ = Math.sin(φ), cosφ = Math.cos(φ);
-      const N = a / Math.sqrt(1 - e2 * sinφ * sinφ);
-      const x = (N + h) * cosφ * Math.cos(λ);
-      const y = (N + h) * cosφ * Math.sin(λ);
-      const z = (N * (1 - e2) + h) * Math.sin(φ);
-      return { x, y, z };
-    }
+    // ---------- VECTOR METHOD (ENU/topocentric) - REPLACED CALCULATION ----------
+    function calcAzEl(lat, lon, satLon){
+      // Earth radius and GEO height (km)
+      const Re = 6378.137;
+      const h = 35786.0;
 
-    // Satellite ECEF for geostationary (assume on equatorial plane at satLon)
-    function ecefSatGeostationary(satLonDeg) {
-      const λs = deg2rad(satLonDeg);
-      return { x: Rs * Math.cos(λs), y: Rs * Math.sin(λs), z: 0 };
-    }
+      // convert to radians
+      const latR = lat * Math.PI/180;
+      const lonR = lon * Math.PI/180;
+      const satLonR = satLon * Math.PI/180;
 
-    // delta ECEF -> ENU at receiver (east, north, up)
-    function ecefToEnu(dx, dy, dz, latDeg, lonDeg) {
-      const φ = deg2rad(latDeg);
-      const λ = deg2rad(lonDeg);
-      const sinφ = Math.sin(φ), cosφ = Math.cos(φ);
-      const sinλ = Math.sin(λ), cosλ = Math.cos(λ);
+      // observer ECEF
+      const xObs = Re * Math.cos(latR) * Math.cos(lonR);
+      const yObs = Re * Math.cos(latR) * Math.sin(lonR);
+      const zObs = Re * Math.sin(latR);
 
-      const e = -sinλ * dx + cosλ * dy;
-      const n = -sinφ * cosλ * dx - sinφ * sinλ * dy + cosφ * dz;
-      const u = cosφ * cosλ * dx + cosφ * sinλ * dy + sinφ * dz;
-      return { e, n, u };
-    }
+      // satellite ECEF (geostationary on equatorial plane)
+      const xSat = (Re + h) * Math.cos(satLonR);
+      const ySat = (Re + h) * Math.sin(satLonR);
+      const zSat = 0;
 
-    // Vector method: compute Az (deg from North clockwise) and El (deg)
-    function calcAnglesVector(lat, lon, satLon) {
-      const sat = ecefSatGeostationary(satLon);
-      const ant = geodeticToEcef(lat, lon, 0);
-      const dx = sat.x - ant.x;
-      const dy = sat.y - ant.y;
-      const dz = sat.z - ant.z;
-      const enu = ecefToEnu(dx, dy, dz, lat, lon);
+      // line-of-sight vector from observer to satellite
+      const dx = xSat - xObs;
+      const dy = ySat - yObs;
+      const dz = zSat - zObs;
 
-      let az = rad2deg(Math.atan2(enu.e, enu.n)); // atan2(east, north)
+      // rotate LOS into local ENU (East, North, Up)
+      // East
+      const e = -Math.sin(lonR) * dx + Math.cos(lonR) * dy;
+      // North
+      const n = -Math.sin(latR) * Math.cos(lonR) * dx
+                - Math.sin(latR) * Math.sin(lonR) * dy
+                + Math.cos(latR) * dz;
+      // Up
+      const u =  Math.cos(latR) * Math.cos(lonR) * dx
+               + Math.cos(latR) * Math.sin(lonR) * dy
+               + Math.sin(latR) * dz;
+
+      // azimuth: angle East of North
+      let az = Math.atan2(e, n) * 180 / Math.PI;
       if (az < 0) az += 360;
-      const el = rad2deg(Math.atan2(enu.u, Math.sqrt(enu.n * enu.n + enu.e * enu.e)));
-      return { az, el, enu };
+
+      // elevation
+      const el = Math.atan2(u, Math.sqrt(e*e + n*n)) * 180 / Math.PI;
+
+      return { az, el };
+    }
+    // -------------------------------------------------------------------------
+
+    function drawAz(az){
+      azCtx.clearRect(0,0,200,200);
+      azCtx.strokeStyle = 'black';
+      azCtx.beginPath();
+      azCtx.arc(100,100,80,0,2*Math.PI);
+      azCtx.stroke();
+      const rad = (az-90)*Math.PI/180;
+      azCtx.strokeStyle = 'blue';
+      azCtx.beginPath();
+      azCtx.moveTo(100,100);
+      azCtx.lineTo(100+70*Math.cos(rad),100+70*Math.sin(rad));
+      azCtx.stroke();
     }
 
-    // DRAWING
-    function drawAzimuth(az, heading = null) {
-      const ctx = azCtx;
-      const w = azCanvas.width, h = azCanvas.height;
-      ctx.clearRect(0, 0, w, h);
-      const cx = w/2, cy = h/2, r = Math.min(w, h)/2 - 12;
+    function drawEl(el){
+      elCtx.clearRect(0,0,200,200);
+      elCtx.strokeStyle = 'black';
+      elCtx.beginPath();
+      elCtx.arc(100,100,80,0,-Math.PI/2,true);
+      elCtx.stroke();
 
-      // circle (black)
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, 2*Math.PI);
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      elCtx.fillStyle = 'black';
+      elCtx.font = '12px sans-serif';
+      elCtx.textAlign = 'center';
+      elCtx.textBaseline = 'middle';
+      // tick labels (inside the arc)
+      // 0° at right (horizon), 45° diagonal, 90° top (vertical)
+      elCtx.fillText('0', 100 + 80*Math.cos(0) - 18, 100 + 80*Math.sin(0));     // right
+      elCtx.fillText('45', 100 + 80*Math.cos(-Math.PI/4) - 18, 100 + 80*Math.sin(-Math.PI/4) - 6); // diag
+      elCtx.fillText('90', 100 + 80*Math.cos(-Math.PI/2), 100 + 80*Math.sin(-Math.PI/2) + 8); // top
 
-      // cardinals
-      ctx.fillStyle = '#0f172a';
-      ctx.font = '14px Inter';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('N', cx, cy - r + 6);
-      ctx.fillText('S', cx, cy + r - 6);
-      ctx.fillText('W', cx - r + 6, cy);
-      ctx.fillText('E', cx + r - 6, cy);
-
-      // satellite az (blue)
-      const satRad = (az - 90) * Math.PI / 180; // convert so 0° = north (up)
-      const sx = cx + r * Math.cos(satRad), sy = cy + r * Math.sin(satRad);
-      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(sx, sy);
-      ctx.strokeStyle = 'blue'; ctx.lineWidth = 3; ctx.stroke();
-
-      // heading arrow (gray) if provided
-      if (heading !== null && !isNaN(heading)) {
-        const headRad = (heading - 90) * Math.PI / 180;
-        const hx = cx + (r * 0.85) * Math.cos(headRad), hy = cy + (r * 0.85) * Math.sin(headRad);
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(hx, hy);
-        ctx.strokeStyle = '#888888'; ctx.lineWidth = 2; ctx.setLineDash([6,4]); ctx.stroke();
-        ctx.setLineDash([]);
+      if(el<0 || el>90){
+        elVal.textContent = 'EL=Out of range';
+        return;
       }
+      elVal.textContent = 'EL='+el.toFixed(2);
 
-      azLabel.textContent = `Azimuth: ${az.toFixed(2)}°`;
+      // 0° => right, 90° => up
+      const rad = el * Math.PI/180;
+      const x = 100 + 70 * Math.cos(rad);
+      const y = 100 - 70 * Math.sin(rad);
+
+      elCtx.strokeStyle = 'blue';
+      elCtx.beginPath();
+      elCtx.moveTo(100,100);
+      elCtx.lineTo(x,y);
+      elCtx.stroke();
     }
 
-    function drawElevation(el) {
-      const ctx = elCtx;
-      const w = elCanvas.width, h = elCanvas.height;
-      ctx.clearRect(0, 0, w, h);
-      const cx = w/2, cy = h - 12, r = Math.min(w, h)/2 - 16;
-
-      // quarter arc 0->90 (black)
-      ctx.beginPath();
-      for (let t = 0; t <= 90; t += 2) {
-        const a = t * Math.PI/180;
-        const x = cx + r * Math.cos(a);
-        const y = cy - r * Math.sin(a);
-        if (t === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      }
-      ctx.strokeStyle = 'black'; ctx.lineWidth = 2; ctx.stroke();
-
-      // labels slightly inside arc
-      [0,45,90].forEach(m => {
-        const a = m * Math.PI/180;
-        const tx = cx + (r - 22) * Math.cos(a);
-        const ty = cy - (r - 22) * Math.sin(a);
-        ctx.fillStyle = '#0f172a'; ctx.font = '12px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(`${m}°`, tx, ty);
-      });
-
-      // draw arrow only if el >= 0
-      if (el >= 0) {
-        const a = el * Math.PI/180;
-        const ex = cx + r * Math.cos(a);
-        const ey = cy - r * Math.sin(a);
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey);
-        ctx.strokeStyle = 'blue'; ctx.lineWidth = 3; ctx.stroke();
-      } else {
-        // if not visible, optionally draw a small horizon marker (thin line)
-        ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
-        ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.stroke();
-      }
+    function drawRel(rel){
+      relCtx.clearRect(0,0,200,200);
+      relCtx.strokeStyle = 'black';
+      relCtx.strokeRect(60,40,80,120);
+      relCtx.fillStyle='black';
+      relCtx.beginPath();
+      relCtx.moveTo(100,20);relCtx.lineTo(90,40);relCtx.lineTo(110,40);relCtx.closePath();
+      relCtx.fill();
+      relVal.textContent = 'REL='+rel.toFixed(2);
+      const rad=(rel-90)*Math.PI/180;
+      relCtx.strokeStyle='blue';
+      relCtx.beginPath();
+      relCtx.moveTo(100,100);
+      relCtx.lineTo(100+70*Math.cos(rad),100+70*Math.sin(rad));
+      relCtx.stroke();
     }
 
-    function updateAll() {
-      const { lat, lon, satLon, heading } = getInputs();
-      const { az, el } = calcAnglesVector(lat, lon, satLon);
-
-      // draw az with optional heading overlay
-      drawAzimuth(az, heading);
-
-      // relative azimuth to heading: normalize to [-180, 180]
-      let rel = (az - heading + 360) % 360;
-      if (rel > 180) rel -= 360;
-      relLabel.textContent = `Relative to heading: ${rel.toFixed(2)}°`;
-
-      // elevation labeling / visibility
-      if (el < 0) {
-        elLabel.textContent = `Elevation: ${el.toFixed(2)}° — Not visible`;
-        elLabel.classList.add('not-visible');
-      } else {
-        elLabel.textContent = `Elevation: ${el.toFixed(2)}°`;
-        elLabel.classList.remove('not-visible');
-      }
-
-      // elevation drawing (arrow only if visible)
-      drawElevation(el);
-
-      copyBtn.disabled = false;
+    function updateAll(){
+      const {lat,lon,satLon,heading} = getLatLon();
+      const {az,el} = calcAzEl(lat,lon,satLon);
+      azVal.textContent = 'AZ='+az.toFixed(2);
+      drawAz(az);
+      drawEl(el);
+      const rel = ((az-heading)+360)%360;
+      drawRel(rel);
     }
 
-    // geolocation: refresh restores device lat/lon
-    async function getAndShowLocation() {
+    async function getAndShowLocation(){
       showStatus('Requesting location...');
       copyBtn.disabled = true;
-      if (!('geolocation' in navigator)) { showStatus('Geolocation not supported', true); return; }
+      if (!('geolocation' in navigator)){
+        showStatus('Geolocation API not supported.', true);
+        return;
+      }
       const opts = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 };
-      return new Promise(resolve => {
-        navigator.geolocation.getCurrentPosition(pos => {
-          setLatLon(pos.coords.latitude, pos.coords.longitude);
-          showStatus(`Location loaded (±${Math.round(pos.coords.accuracy)} m)`);
-          updateAll();
-          copyBtn.disabled = false;
-          resolve(pos.coords);
-        }, err => {
-          showStatus('Location error: ' + (err.message || err.code), true);
-          resolve(null);
-        }, opts);
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const coords = pos.coords;
+            latEl.value = Math.abs(coords.latitude).toFixed(2);
+            latDir.value = coords.latitude>=0?'N':'S';
+            lonEl.value = Math.abs(coords.longitude).toFixed(2);
+            lonDir.value = coords.longitude>=0?'E':'W';
+            copyBtn.disabled = false;
+            showStatus(`Location loaded (±${Math.round(coords.accuracy)} m).`);
+            updateAll();
+            resolve(coords);
+          },
+          err => {
+            showStatus('Location error: '+err.message,true);
+            resolve(null);
+          },
+          opts
+        );
       });
     }
 
-    // UI wiring
-    [latEl, lonEl, satLonEl, headingEl].forEach(el => {
-      el.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          normalizeInput(el, el === latEl ? 90 : (el === headingEl ? 360 : 180));
-          updateAll();
-        }
-      });
-      el.addEventListener('blur', () => {
-        normalizeInput(el, el === latEl ? 90 : (el === headingEl ? 360 : 180));
-      });
-      el.addEventListener('focus', e => setTimeout(() => e.target.select(), 0));
-    });
-
-    [latDir, lonDir, satLonDir].forEach(sel => sel.addEventListener('change', updateAll));
-    refreshBtn.addEventListener('click', () => getAndShowLocation());
+    window.addEventListener('DOMContentLoaded', () => { getAndShowLocation(); });
+    refreshBtn.addEventListener('click', () => { getAndShowLocation(); });
 
     copyBtn.addEventListener('click', async () => {
-      const { lat, lon, satLon, heading } = getInputs();
-      const { az, el } = calcAnglesVector(lat, lon, satLon);
-      let rel = (az - heading + 360) % 360; if (rel > 180) rel -= 360;
-      const text = `Lat: ${lat.toFixed(2)}°, Lon: ${lon.toFixed(2)}°, Sat: ${satLon.toFixed(2)}°, Heading: ${heading.toFixed(2)}° | Az: ${az.toFixed(2)}°, El: ${el.toFixed(2)}°, RelAz: ${rel.toFixed(2)}°`;
-      try { await navigator.clipboard.writeText(text); const prev = copyBtn.textContent; copyBtn.textContent = 'Copied!'; setTimeout(() => copyBtn.textContent = prev, 1200); }
-      catch (e) { alert('Copy failed: ' + e.message); }
+      const { lat, lon, satLon } = getLatLon();
+      const text = `${Math.abs(lat).toFixed(2)}° ${lat>=0?'N':'S'}, ${Math.abs(lon).toFixed(2)}° ${lon>=0?'E':'W'}, Sat: ${Math.abs(satLon).toFixed(2)}° ${satLon>=0?'E':'W'}`;
+      try{
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent='Copied!';
+        setTimeout(()=>copyBtn.textContent='Copy',1200);
+      }catch(e){alert('Unable to copy: '+e.message);}
     });
 
-    function showStatus(msg, isError = false) { statusEl.textContent = msg; statusEl.classList.toggle('error', !!isError); }
+    const inputs=[latEl,lonEl,satLonEl,headingEl];
+    inputs.forEach((el,idx)=>{
+      el.addEventListener('input',()=>updateAll());
+      el.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){
+          normalizeInput(el, el===latEl?90:(el===headingEl?360:180));
+          updateAll();
+          if(idx<inputs.length-1){inputs[idx+1].focus();inputs[idx+1].select();}
+        }
+      });
+      el.addEventListener('blur',()=>{normalizeInput(el,el===latEl?90:(el===headingEl?360:180));updateAll();});
+      el.addEventListener('focus',e=>setTimeout(()=>e.target.select(),0));
+    });
 
-    // initial
-    window.addEventListener('DOMContentLoaded', () => getAndShowLocation());
+    ;['latDir','lonDir','satLonDir'].forEach(id=>{
+      document.getElementById(id).addEventListener('change',()=>updateAll());
+    });
   </script>
 </body>
 </html>
