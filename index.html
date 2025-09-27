@@ -134,6 +134,7 @@
       <div class="diagram">
         <div id="azVal">AZ=</div>
         <div id="elVal">EL=</div>
+        <div id="visibleRange" style="font-weight:bold; margin-top:4px;"></div>
       </div>
     </div>
 
@@ -163,6 +164,9 @@
   const zonesBody=document.getElementById("zonesBody");
   const addBlockBtn=document.getElementById("addBlockBtn");
   const satRangesList=document.getElementById("satRangesList");
+
+  const MIN_ELEVATION = 5;  // minimum EL in degrees for visibility
+
 
   const zoneColors = [
     "rgba(255, 0, 0, 0.25)",
@@ -241,6 +245,12 @@ function drawRel(rel) {
   }
 }
 
+function formatLonEW(lon) {
+  if (lon > 0) return formatNumber(lon) + "°E";
+  if (lon < 0) return formatNumber(Math.abs(lon)) + "°W";
+  return "0°";
+}
+
 
 function checkBlockingZones(rel) {
   const rows = zonesBody.querySelectorAll("tr");
@@ -296,6 +306,7 @@ function checkBlockingZones(rel) {
     tr.querySelector("button").addEventListener("click",()=>{
       tr.remove();
       if(zonesBody.children.length===0) zonesTable.style.display="none";
+      setupKeyboardNavigation(); 
       updateAll();
     });
     zonesBody.appendChild(tr);
@@ -347,22 +358,43 @@ function checkBlockingZones(rel) {
 function updateAll(){
   const {lat,lon,satLon,heading}=getLatLon();
   const {az,el}=calcAzEl(lat,lon,satLon);
+  azVal.textContent='AZ='+formatNumber(az);
 
-  azVal.textContent = 'AZ=' + formatNumber(az);
-
+  // EL value handling
   if (el < 0) {
-    elVal.innerHTML = `<span style="color:red">EL=${formatNumber(el)} (Out of Range)</span>`;
+    elVal.innerHTML = `EL=<span style="color:red;">${formatNumber(el)} (Out of Range)</span>`;
   } else {
     elVal.textContent = 'EL=' + formatNumber(el);
   }
 
-  const rel = ((az - heading) + 360) % 360;
-  relVal.textContent = 'REL=' + formatNumber(rel);
+  // Compute visible range of satellite longitudes (EL > 0)
+  const step = 0.5; // resolution in degrees
+  let visibleLons = [];
+  for (let lonSat = -180; lonSat <= 180; lonSat += step) {
+    const { el: testEl } = calcAzEl(lat, lon, lonSat);
+    if (testEl > MIN_ELEVATION) visibleLons.push(lonSat);
+  }
 
+  if (visibleLons.length > 0) {
+    const minLonRaw = Math.min(...visibleLons);
+const maxLonRaw = Math.max(...visibleLons);
+const minLon = formatLonEW(minLonRaw);
+const maxLon = formatLonEW(maxLonRaw);
+document.getElementById("visibleRange").textContent =
+  `Visible range (EL > ${MIN_ELEVATION}) from ${minLon} to ${maxLon}`;
+
+  } else {
+    document.getElementById("visibleRange").textContent =
+      `No satellites visible above horizon`;
+  }
+
+  const rel=((az-heading)+360)%360;
+  relVal.textContent='REL='+formatNumber(rel);
   drawRel(rel);
-  copyBtn.disabled = false;
+  copyBtn.disabled=false;
   computeSatRangesAndRender();
 }
+
 
 
   async function getAndShowLocation(){
@@ -382,12 +414,42 @@ function updateAll(){
   }
 
   refreshBtn.addEventListener("click",()=>getAndShowLocation());
-  copyBtn.addEventListener("click",()=>{
-    const {lat,lon,satLon,heading}=getLatLon();
-    navigator.clipboard.writeText(
-      `Lat=${lat} Lon=${lon} SatLon=${satLon} Heading=${heading}`
-    ).then(()=>{copyBtn.textContent="Copied!";setTimeout(()=>copyBtn.textContent="Copy",1000)});
+copyBtn.addEventListener("click",()=>{
+  const {lat,lon,satLon,heading}=getLatLon();
+
+  // base info
+  let text = `Lat=${lat} Lon=${lon} SatLon=${satLon} Heading=${heading}\n`;
+
+  // add visible range (EL > MIN_ELEVATION)
+  const visibleRangeEl = document.getElementById("visibleRange");
+  if (visibleRangeEl && visibleRangeEl.textContent.trim() !== "") {
+    text += visibleRangeEl.textContent + "\n";
+  }
+
+  // add blocking zones
+  const rows = Array.from(zonesBody.querySelectorAll("tr"));
+  if (rows.length > 0) {
+    text += "Blocking zones:\n";
+    rows.forEach((row, idx) => {
+      const start = row.cells[0].querySelector("input").value;
+      const stop  = row.cells[1].querySelector("input").value;
+      text += `  Zone ${idx+1}: ${start}°–${stop}°\n`;
+    });
+  }
+
+  // add blocking ranges (from satRangesList)
+  const ranges = satRangesList.innerText.trim();
+  if (ranges !== "") {
+    text += "Blocking ranges:\n" + ranges + "\n";
+  }
+
+  // copy to clipboard
+  navigator.clipboard.writeText(text).then(()=>{
+    copyBtn.textContent="Copied!";
+    setTimeout(()=>copyBtn.textContent="Copy",1000);
   });
+});
+
 
   [latEl,lonEl,satLonEl,headingEl].forEach(inp=>{
     inp.addEventListener("blur",()=>{
@@ -565,9 +627,9 @@ function refineBoundary(a, b, lat, lon, heading, start, stop, coarseStep, findEn
       });
 
       if(parts.length===0){
-        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1}: — no sat lon produces REL inside this zone</div>`);
+        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1}: — No visible Sat produces blockage this zone</div>`);
       } else {
-        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1}: ${parts.join(', ')}</div>`);
+        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1} Blocking zone range:  ${parts.join(', ')}</div>`);
       }
     });
 
@@ -575,36 +637,66 @@ function refineBoundary(a, b, lat, lon, heading, start, stop, coarseStep, findEn
   }
 
   // Keyboard navigation setup
-  function setupKeyboardNavigation() {
-    const focusable = Array.from(
-      document.querySelectorAll("input, select")
-    );
-    focusable.forEach((el, idx) => {
-      el.addEventListener("keydown", (e) => {
-        let newIndex = null;
-        if (e.key === "Enter") {
-          e.preventDefault();
-          newIndex = e.shiftKey ? idx - 1 : idx + 1;
-        }
+function setupKeyboardNavigation() {
+  const focusable = Array.from(document.querySelectorAll("input, select"));
+
+  focusable.forEach((el, idx) => {
+    // remove any existing listener first
+    el.onkeydown = (e) => {
+      let newIndex = null;
+
+      // only override Enter if not inside a select
+      if (e.key === "Enter" && el.tagName !== "SELECT") {
+        e.preventDefault();
+        newIndex = e.shiftKey ? idx - 1 : idx + 1;
+      }
+
+      // only override arrow navigation if not inside a select
+      if (el.tagName !== "SELECT") {
         if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          e.preventDefault();
           newIndex = idx + 1;
         }
         if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          e.preventDefault();
           newIndex = idx - 1;
         }
-        if (newIndex !== null) {
-          if (newIndex < 0) newIndex = focusable.length - 1;
-          if (newIndex >= focusable.length) newIndex = 0;
-          focusable[newIndex].focus();
-        }
-      });
-    });
-  }
+      }
 
-  window.addEventListener('DOMContentLoaded',()=>{
-    setupKeyboardNavigation();
-    updateAll();
+      if (newIndex !== null) {
+        if (newIndex < 0) newIndex = focusable.length - 1;
+        if (newIndex >= focusable.length) newIndex = 0;
+        focusable[newIndex].focus();
+      }
+    };
   });
+}
+
+
+window.addEventListener('DOMContentLoaded', () => {
+  setupKeyboardNavigation();
+  updateAll();
+});
+
+// Global error handler
+// Global error handler
+window.addEventListener("error", function (event) {
+  let msg = document.getElementById("errorBox");
+  if (!msg) {
+    msg = document.createElement("div");
+    msg.id = "errorBox";
+    msg.style.background = "#fee";
+    msg.style.color = "red";
+    msg.style.padding = "8px";
+    msg.style.border = "1px solid red";
+    msg.style.margin = "10px 0";
+    msg.style.fontWeight = "bold";
+    document.body.prepend(msg);
+  }
+  msg.textContent = "⚠️ Error: " + event.message + " (line " + event.lineno + ")";
+});
+
+
   </script>
   </div>
 </body>
