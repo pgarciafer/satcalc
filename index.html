@@ -139,54 +139,59 @@
   const zonesTable=document.getElementById("zonesTable");
   const zonesBody=document.getElementById("zonesBody");
   const addBlockBtn=document.getElementById("addBlockBtn");
+  
+const zoneColors = [
+    "rgba(255, 0, 0, 0.25)",   // red
+    "rgba(0, 128, 255, 0.25)", // blue
+    "rgba(0, 200, 0, 0.25)",   // green
+    "rgba(255, 165, 0, 0.25)", // orange
+    "rgba(128, 0, 128, 0.25)", // purple
+    "rgba(255, 20, 147, 0.25)" // pink
+  ];
 
+// Draw a blocking zone (absolute, not heading-relative)
+function drawZone(start, stop, isActive, index) {
+  let startAZ = (start + 360) % 360;
+  let stopAZ  = (stop  + 360) % 360;
 
-function drawZone(start, stop, heading, isActive) {
-  let startRel = ((start - heading) + 360) % 360;
-  let stopRel  = ((stop  - heading) + 360) % 360;
+  if (stopAZ < startAZ) stopAZ += 360;
 
-  // Handle wrap-around in a single arc
-  if (stopRel < startRel) {
-    stopRel += 360;
-  }
+  const baseColor = zoneColors[(index - 1) % zoneColors.length];
+  const fillColor = isActive ? baseColor.replace("0.25", "0.45") : baseColor;
 
   relCtx.save();
   relCtx.translate(100, 100);
-  relCtx.fillStyle = isActive ? "rgba(200,0,0,0.35)" : "rgba(200,0,0,0.15)";
+  relCtx.fillStyle = fillColor;
 
   relCtx.beginPath();
   relCtx.moveTo(0, 0);
   relCtx.arc(
     0, 0, 80,
-    (startRel - 90) * Math.PI / 180,
-    (stopRel  - 90) * Math.PI / 180,
+    (startAZ - 90) * Math.PI / 180,
+    (stopAZ  - 90) * Math.PI / 180,
     false
   );
   relCtx.closePath();
   relCtx.fill();
-
   relCtx.restore();
 }
 
-
-function drawRel(rel, heading) {
+// Draw REL + vessel + zones
+function drawRel(rel) {
   relCtx.clearRect(0, 0, 200, 200);
 
   if (!vesselImg.complete) {
-    vesselImg.onload = () => drawRel(rel, heading);
+    vesselImg.onload = () => drawRel(rel);
     return;
   }
 
-  // --- Draw vessel image ---
   relCtx.save();
   relCtx.translate(100, 100);
   relCtx.drawImage(vesselImg, -110, -110, 220, 220);
   relCtx.restore();
 
-  // --- Check which zone REL is inside ---
-  const result = checkBlockingZones(rel, heading);
+  const result = checkBlockingZones(rel);
 
-  // --- Draw all blocking zones ---
   const rows = zonesBody.querySelectorAll("tr");
   rows.forEach((row, idx) => {
     const start = parseFloat(row.cells[0].querySelector("input").value);
@@ -194,216 +199,204 @@ function drawRel(rel, heading) {
     if (isNaN(start) || isNaN(stop)) return;
 
     const isActive = (result && result.index === idx + 1);
-    drawZone(start, stop, heading, isActive);
+    drawZone(start, stop, isActive, idx + 1);
   });
 
-  // --- Draw REL arrow ---
+  // REL arrow
   const rad = (rel - 90) * Math.PI / 180;
-  relCtx.strokeStyle = result ? 'red' : 'blue';
+  relCtx.strokeStyle = result 
+    ? zoneColors[(result.index - 1) % zoneColors.length].replace("0.25", "1.0")
+    : "blue";
   relCtx.lineWidth = 2;
   relCtx.beginPath();
   relCtx.moveTo(100, 100);
   relCtx.lineTo(100 + 70 * Math.cos(rad), 100 + 70 * Math.sin(rad));
   relCtx.stroke();
+
+  if (result) {
+    const zoneColor = zoneColors[(result.index - 1) % zoneColors.length].replace("0.25", "1.0");
+    blockMsg.textContent = `Entered in block zone `;
+    blockMsg.style.display = "block";
+    blockMsg.style.color = zoneColor;
+  } else {
+    blockMsg.style.display = "none";
+  }
 }
 
+function checkBlockingZones(rel){
+  const rows = zonesBody.querySelectorAll("tr");
+  let zoneIndex = 0;
 
-    function createZoneRow(start=0.00, stop=0.00){
-      const tr=document.createElement("tr");
-      tr.innerHTML=`
-        <td><input type="number" min="0" max="360" step="0.01" value="${start.toFixed(2)}"></td>
-        <td><input type="number" min="0" max="360" step="0.01" value="${stop.toFixed(2)}"></td>
-        <td><button class="small secondary">Remove</button></td>
-      `;
+  for(const row of rows){
+    zoneIndex++;
+    const start = parseFloat(row.cells[0].querySelector("input").value);
+    const stop  = parseFloat(row.cells[1].querySelector("input").value);
+    if(isNaN(start) || isNaN(stop)) continue;
 
-      const startInput = tr.querySelector("td:nth-child(1) input");
-      const stopInput  = tr.querySelector("td:nth-child(2) input");
-      [startInput, stopInput].forEach(inp => {
-        inp.addEventListener("input", updateAll);
-        inp.addEventListener("focus", e => setTimeout(()=>e.target.select(),0));
-        inp.addEventListener("blur", () => {
-          let val = parseFloat(inp.value);
-          if(isNaN(val)) val = 0;
-          if(val < 0) val = 0;
-          if(val > 360) val = 360;
-          inp.value = val.toFixed(2);
-          updateAll();
-        });
-      });
+    let startAZ = (start + 360) % 360;
+    let stopAZ  = (stop  + 360) % 360;
 
-      tr.querySelector("button").addEventListener("click",()=>{
-        tr.remove();
-        if(zonesBody.children.length===0) zonesTable.style.display="none";
-        updateAll(); // recheck after removal
-      });
-
-      zonesBody.appendChild(tr);
-      zonesTable.style.display="table";
-      updateAll(); // ensure REL is checked after adding
-    }
-
-    addBlockBtn.addEventListener("click",()=>createZoneRow());
-
-    function showStatus(msg,isError=false){
-      statusEl.textContent=msg;
-      statusEl.classList.toggle('error',!!isError)
-    }
-
-    function normalizeInput(input, max){
-      let val = (input.value || "").trim().replace(",", ".");
-      if(val === "") return;
-      let num = parseFloat(val);
-      if(isNaN(num)) return;
-      if(num > max) num = max;
-      if(num < 0) num = 0;
-      input.value = num.toFixed(2);
-    }
-
-function checkBlockingZones(rel, heading){
-      const rows = zonesBody.querySelectorAll("tr");
-      let zoneIndex = 0;
-    
-      for(const row of rows){
-        zoneIndex++;
-        const start = parseFloat(row.cells[0].querySelector("input").value);
-        const stop  = parseFloat(row.cells[1].querySelector("input").value);
-        if(isNaN(start) || isNaN(stop)) continue;
-    
-        // convert to RELATIVE angles (like drawZone does)
-        let startRel = ((start - heading) + 360) % 360;
-        let stopRel  = ((stop  - heading) + 360) % 360;
-        let relNorm  = ((rel  - heading) + 360) % 360;
-    
-        if(startRel <= stopRel){
-          if(relNorm >= startRel && relNorm <= stopRel){
-            return { index: zoneIndex, start, stop };
-          }
-        } else {
-          if(relNorm >= startRel || relNorm <= stopRel){
-            return { index: zoneIndex, start, stop };
-          }
-        }
+    if(startAZ <= stopAZ){
+      if(rel >= startAZ && rel <= stopAZ){
+        return { index: zoneIndex, start, stop };
       }
-      return null;
-    }
-
-    function getLatLon(){
-      const latVal = parseFloat((latEl.value || "").trim().replace(",", ".")) || 0;
-      const lonVal = parseFloat((lonEl.value || "").trim().replace(",", ".")) || 0;
-      const satLonVal = parseFloat((satLonEl.value || "").trim().replace(",", ".")) || 0;
-      const headingVal = parseFloat((headingEl.value || "").trim().replace(",", ".")) || 0;
-      const lat = latDir.value === "N" ? latVal : -latVal;
-      const lon = lonDir.value === "E" ? lonVal : -lonVal;
-      const satLon = satLonDir.value === "E" ? satLonVal : -satLonVal;
-      return { lat, lon, satLon, heading: headingVal };
-    }
-
-    function calcAzEl(lat,lon,satLon){
-      const Re=6378.137,h=35786.0;
-      const latR=lat*Math.PI/180, lonR=lon*Math.PI/180, satLonR=satLon*Math.PI/180;
-      const xObs=Re*Math.cos(latR)*Math.cos(lonR), yObs=Re*Math.cos(latR)*Math.sin(lonR), zObs=Re*Math.sin(latR);
-      const xSat=(Re+h)*Math.cos(satLonR), ySat=(Re+h)*Math.sin(satLonR), zSat=0;
-      const dx=xSat-xObs, dy=ySat-yObs, dz=zSat-zObs;
-      const e=-Math.sin(lonR)*dx+Math.cos(lonR)*dy;
-      const n=-Math.sin(latR)*Math.cos(lonR)*dx -Math.sin(latR)*Math.sin(lonR)*dy +Math.cos(latR)*dz;
-      const u=Math.cos(latR)*Math.cos(lonR)*dx +Math.cos(latR)*Math.sin(lonR)*dy +Math.sin(latR)*dz;
-      let az=Math.atan2(e,n)*180/Math.PI; if(az<0)az+=360;
-      const el=Math.atan2(u,Math.sqrt(e*e+n*n))*180/Math.PI;
-      return {az,el};
-    }
-
-    const vesselImg=new Image();vesselImg.src="https://pgarciafer.github.io/satcalc/IMG_0585.PNG";
-
-
-
-
-
-  function updateAll(){
-    const {lat,lon,satLon,heading}=getLatLon();
-    const {az,el}=calcAzEl(lat,lon,satLon);
-    azVal.textContent='AZ='+az.toFixed(2);
-    elVal.textContent='EL='+el.toFixed(2);
-    const rel=((az-heading)+360)%360;
-    relVal.textContent='REL='+rel.toFixed(2);
-
-    drawRel(rel, heading);
-
-    // Blocking zone detection
-    const result = checkBlockingZones(rel);
-    if(result){
-      blockMsg.textContent = `Entered blocking zone (Zone ${result.index}: ${result.start.toFixed(2)}°–${result.stop.toFixed(2)}°)`;
-      blockMsg.style.display = "block";
     } else {
-      blockMsg.style.display = "none";
+      if(rel >= startAZ || rel <= stopAZ){
+        return { index: zoneIndex, start, stop };
+      }
     }
-
-    copyBtn.disabled=false;
   }
+  return null;
+}
 
-    async function getAndShowLocation(){
-      showStatus('Requesting location...');
-      copyBtn.disabled=true;
-      if(!('geolocation' in navigator)){
-        showStatus('Geolocation API not supported.',true);
-        return;
+function createZoneRow(start=0.00, stop=0.00){
+  const tr=document.createElement("tr");
+  tr.innerHTML=`
+    <td><input type="number" min="0" max="360" step="0.01" value=""></td>
+    <td><input type="number" min="0" max="360" step="0.01" value=""></td>
+    <td><button class="small secondary">Remove</button></td>
+  `;
+  const startInput = tr.querySelector("td:nth-child(1) input");
+  const stopInput  = tr.querySelector("td:nth-child(2) input");
+  [startInput, stopInput].forEach(inp => {
+    inp.addEventListener("input", updateAll);
+    inp.addEventListener("blur", () => {
+      let val = parseFloat(inp.value);
+      if(isNaN(val)) val = 0;
+      if(val < 0) val = 0;
+      if(val > 360) val = 360;
+      inp.value = val.toFixed(2);
+      updateAll();
+    });
+  });
+  tr.querySelector("button").addEventListener("click",()=>{
+    tr.remove();
+    if(zonesBody.children.length===0) zonesTable.style.display="none";
+    updateAll();
+  });
+  zonesBody.appendChild(tr);
+  zonesTable.style.display="table";
+  updateAll();
+}
+addBlockBtn.addEventListener("click",()=>createZoneRow());
+
+function showStatus(msg,isError=false){
+  statusEl.textContent=msg;
+  statusEl.classList.toggle('error',!!isError)
+}
+
+function normalizeInput(input, max){
+  let val = (input.value || "").trim().replace(",", ".");
+  if(val === "") return;
+  let num = parseFloat(val);
+  if(isNaN(num)) return;
+  if(num > max) num = max;
+  if(num < 0) num = 0;
+  input.value = num.toFixed(2);
+}
+
+function getLatLon(){
+  const latVal = parseFloat((latEl.value || "").trim().replace(",", ".")) || 0;
+  const lonVal = parseFloat((lonEl.value || "").trim().replace(",", ".")) || 0;
+  const satLonVal = parseFloat((satLonEl.value || "").trim().replace(",", ".")) || 0;
+  const headingVal = parseFloat((headingEl.value || "").trim().replace(",", ".")) || 0;
+  const lat = latDir.value === "N" ? latVal : -latVal;
+  const lon = lonDir.value === "E" ? lonVal : -lonVal;
+  const satLon = satLonDir.value === "E" ? satLonVal : -satLonVal;
+  return { lat, lon, satLon, heading: headingVal };
+}
+
+function calcAzEl(lat,lon,satLon){
+  const Re=6378.137,h=35786.0;
+  const latR=lat*Math.PI/180, lonR=lon*Math.PI/180, satLonR=satLon*Math.PI/180;
+  const xObs=Re*Math.cos(latR)*Math.cos(lonR), yObs=Re*Math.cos(latR)*Math.sin(lonR), zObs=Re*Math.sin(latR);
+  const xSat=(Re+h)*Math.cos(satLonR), ySat=(Re+h)*Math.sin(satLonR), zSat=0;
+  const dx=xSat-xObs, dy=ySat-yObs, dz=zSat-zObs;
+  const e=-Math.sin(lonR)*dx+Math.cos(lonR)*dy;
+  const n=-Math.sin(latR)*Math.cos(lonR)*dx -Math.sin(latR)*Math.sin(lonR)*dy +Math.cos(latR)*dz;
+  const u=Math.cos(latR)*Math.cos(lonR)*dx +Math.cos(latR)*Math.sin(lonR)*dy +Math.sin(latR)*dz;
+  let az=Math.atan2(e,n)*180/Math.PI; if(az<0)az+=360;
+  const el=Math.atan2(u,Math.sqrt(e*e+n*n))*180/Math.PI;
+  return {az,el};
+}
+
+const vesselImg=new Image();
+vesselImg.src="https://pgarciafer.github.io/satcalc/IMG_0585.PNG";
+
+function updateAll(){
+  const {lat,lon,satLon,heading}=getLatLon();
+  const {az,el}=calcAzEl(lat,lon,satLon);
+  azVal.textContent='AZ='+az.toFixed(2);
+  elVal.textContent='EL='+el.toFixed(2);
+  const rel=((az-heading)+360)%360;
+  relVal.textContent='REL='+rel.toFixed(2);
+  drawRel(rel);
+  copyBtn.disabled=false;
+}
+
+async function getAndShowLocation(){
+  showStatus('Requesting location...');
+  copyBtn.disabled=true;
+  if(!('geolocation' in navigator)){
+    showStatus('Geolocation API not supported.',true);
+    return;
+  }
+  const opts={enableHighAccuracy:true,maximumAge:0,timeout:20000};
+  return new Promise(resolve=>{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const c=pos.coords;
+      latEl.value=Math.abs(c.latitude).toFixed(2);
+      latDir.value=c.latitude>=0?'N':'S';
+      lonEl.value=Math.abs(c.longitude).toFixed(2);
+      lonDir.value=c.longitude>=0?'E':'W';
+      copyBtn.disabled=false;
+      showStatus(`Location loaded (± m).`);
+      updateAll();
+      resolve(c);
+    },err=>{
+      showStatus('Location error: '+err.message,true);
+      resolve(null);
+    },opts);
+  });
+}
+
+refreshBtn.addEventListener('click',()=>{getAndShowLocation();});
+copyBtn.addEventListener('click',async()=>{
+  const {lat,lon,satLon,heading}=getLatLon();
+  const {az,el}=calcAzEl(lat,lon,satLon);
+  const rel=((az-heading)+360)%360;
+  const text=`Lat: °'S', Lon: °'W', Sat: °'W'\nAZ=°, EL=°, REL=°`;
+  try{
+    await navigator.clipboard.writeText(text);
+    copyBtn.textContent='Copied!';
+    setTimeout(()=>copyBtn.textContent='Copy',1200);
+  }catch(e){
+    alert('Unable to copy: '+e.message);
+  }
+});
+
+const inputs=[latEl,lonEl,satLonEl,headingEl];
+inputs.forEach((el,idx)=>{
+  el.addEventListener('input',()=>updateAll());
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      normalizeInput(el,el===latEl?90:(el===headingEl?360:180));
+      updateAll();
+      if(idx<inputs.length-1){
+        inputs[idx+1].focus();
+        inputs[idx+1].select();
       }
-      const opts={enableHighAccuracy:true,maximumAge:0,timeout:20000};
-      return new Promise(resolve=>{
-        navigator.geolocation.getCurrentPosition(pos=>{
-          const c=pos.coords;
-          latEl.value=Math.abs(c.latitude).toFixed(2);
-          latDir.value=c.latitude>=0?'N':'S';
-          lonEl.value=Math.abs(c.longitude).toFixed(2);
-          lonDir.value=c.longitude>=0?'E':'W';
-          copyBtn.disabled=false;
-          showStatus(`Location loaded (±${Math.round(c.accuracy)} m).`);
-          updateAll();
-          resolve(c);
-        },err=>{
-          showStatus('Location error: '+err.message,true);
-          resolve(null);
-        },opts);
-      });
     }
-
-    refreshBtn.addEventListener('click',()=>{getAndShowLocation();});
-    copyBtn.addEventListener('click',async()=>{
-      const {lat,lon,satLon,heading}=getLatLon();
-      const {az,el}=calcAzEl(lat,lon,satLon);
-      const rel=((az-heading)+360)%360;
-      const text=`Lat: ${Math.abs(lat).toFixed(2)}°${lat>=0?'N':'S'}, Lon: ${Math.abs(lon).toFixed(2)}°${lon>=0?'E':'W'}, Sat: ${Math.abs(satLon).toFixed(2)}°${satLon>=0?'E':'W'}\nAZ=${az.toFixed(2)}°, EL=${el.toFixed(2)}°, REL=${rel.toFixed(2)}°`;
-      try{
-        await navigator.clipboard.writeText(text);
-        copyBtn.textContent='Copied!';
-        setTimeout(()=>copyBtn.textContent='Copy',1200);
-      }catch(e){
-        alert('Unable to copy: '+e.message);
-      }
-    });
-
-    const inputs=[latEl,lonEl,satLonEl,headingEl];
-    inputs.forEach((el,idx)=>{
-      el.addEventListener('input',()=>updateAll());
-      el.addEventListener('keydown',e=>{
-        if(e.key==='Enter'){
-          normalizeInput(el,el===latEl?90:(el===headingEl?360:180));
-          updateAll();
-          if(idx<inputs.length-1){
-            inputs[idx+1].focus();
-            inputs[idx+1].select();
-          }
-        }
-      });
-      el.addEventListener('blur',()=>{
-        normalizeInput(el,el===latEl?90:(el===headingEl?360:180));
-        updateAll();
-      });
-      el.addEventListener('focus',e=>setTimeout(()=>e.target.select(),0));
-    });
-    ['latDir','lonDir','satLonDir'].forEach(id=>{
-      document.getElementById(id).addEventListener('change',()=>updateAll());
-    });
-    window.addEventListener('DOMContentLoaded',()=>{updateAll();});
+  });
+  el.addEventListener('blur',()=>{
+    normalizeInput(el,el===latEl?90:(el===headingEl?360:180));
+    updateAll();
+  });
+  el.addEventListener('focus',e=>setTimeout(()=>e.target.select(),0));
+});
+['latDir','lonDir','satLonDir'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>updateAll());
+});
+window.addEventListener('DOMContentLoaded',()=>{updateAll();});
   </script>
 </body>
-</html>
