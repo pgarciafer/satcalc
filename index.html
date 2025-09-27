@@ -53,6 +53,25 @@
       .diagrams{flex-direction:row;justify-content:space-around}
       canvas{width:180px;height:180px}
     }
+
+    #zonesTable td input {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: #0f172a;
+  outline: none;
+  appearance: textfield;
+  padding: 6px 4px;
+}
+
+#zonesTable td input:focus {
+  background: #e0f2fe;
+  border-radius: 4px;
+}
+
   </style>
 </head>
 <body>
@@ -84,20 +103,23 @@
       </div>
 
       <!-- Blocking Zones -->
-      <div class="coord-item" id="blockingZonesSection" style="display:block; grid-template-columns:1fr;">
-        <label style="font-weight:600;">Blocking Zones</label>
-        <button type="button" id="addBlockBtn">Add Blocking Zone</button>
-        <table id="zonesTable" style="display:none;">
-          <thead>
-            <tr>
-              <th>AZ Start</th>
-              <th>AZ Stop</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="zonesBody"></tbody>
-        </table>
-      </div>
+<div class="coord-item" id="blockingZonesSection" style="display:block; grid-template-columns:1fr;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+    <label style="font-weight:600;">Blocking Zones</label>
+    <button type="button" id="addBlockBtn">Add Blocking Zone</button>
+  </div>
+  <table id="zonesTable" style="display:none; width:100%;">
+    <thead>
+      <tr>
+        <th>AZ Start</th>
+        <th>AZ Stop</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="zonesBody"></tbody>
+  </table>
+</div>
+
     </div>
 
     <div class="actions">
@@ -258,17 +280,19 @@ function createZoneRow(start=0.00, stop=0.00){
   `;
   const startInput = tr.querySelector("td:nth-child(1) input");
   const stopInput  = tr.querySelector("td:nth-child(2) input");
-  [startInput, stopInput].forEach(inp => {
-    inp.addEventListener("input", updateAll);
-    inp.addEventListener("blur", () => {
-      let val = parseFloat(inp.value);
-      if(isNaN(val)) val = 0;
-      if(val < 0) val = 0;
-      if(val > 360) val = 360;
-      inp.value = val.toFixed(2);
-      updateAll();
-    });
+[startInput, stopInput].forEach(inp => {
+  inp.addEventListener("input", updateAll);
+  inp.addEventListener("blur", () => {
+    let val = parseFloat(inp.value);
+    if(isNaN(val)) val = 0;
+    if(val < 0) val = 0;
+    if(val > 360) val = 360;
+    inp.value = val.toFixed(2);
+    updateAll();
   });
+  inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
+});
+
   tr.querySelector("button").addEventListener("click",()=>{
     tr.remove();
     if(zonesBody.children.length===0) zonesTable.style.display="none";
@@ -400,3 +424,4 @@ inputs.forEach((el,idx)=>{
 window.addEventListener('DOMContentLoaded',()=>{updateAll();});
   </script>
 </body>
+</html>
