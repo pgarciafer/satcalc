@@ -110,11 +110,11 @@
         <input id="heading" type="text" inputmode="decimal" value="0.00" />
       </div>
 
-      <!-- Blocking Zones -->
+      <!-- Blockage Zones -->
       <div class="coord-item" id="blockingZonesSection" style="display:block; grid-template-columns:1fr;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="font-weight:600;">Blocking Zones</label>
-          <button type="button" id="addBlockBtn">Add Blocking Zone</button>
+          <label style="font-weight:600;">Blockage Zones</label>
+          <button type="button" id="addBlockBtn">Add Blockage Zone</button>
         </div>
         <table id="zonesTable" style="display:none; width:100%;">
           <thead>
@@ -426,10 +426,10 @@ copyBtn.addEventListener("click",()=>{
     text += visibleRangeEl.textContent + "\n";
   }
 
-  // add blocking zones
+  // add Blockage Zones
   const rows = Array.from(zonesBody.querySelectorAll("tr"));
   if (rows.length > 0) {
-    text += "Blocking zones:\n";
+    text += "Blockage Zones:\n";
     rows.forEach((row, idx) => {
       const start = row.cells[0].querySelector("input").value;
       const stop  = row.cells[1].querySelector("input").value;
@@ -557,7 +557,7 @@ function refineBoundary(a, b, lat, lon, heading, start, stop, coarseStep, findEn
     const { lat, lon, heading } = getLatLon();
     const rows = Array.from(zonesBody.querySelectorAll('tr'));
     if(rows.length === 0){
-      satRangesList.innerHTML = "<i>(no blocking zones)</i>";
+      satRangesList.innerHTML = "<i>(no Blockage Zones)</i>";
       return;
     }
     const sampleStep = 0.5;
@@ -629,7 +629,7 @@ function refineBoundary(a, b, lat, lon, heading, start, stop, coarseStep, findEn
       if(parts.length===0){
         outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1} No visible Sat produces blockage here</div>`);
       } else {
-        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1} Blocking zone range:  ${parts.join(', ')}</div>`);
+        outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx+1} Blockage Zone range:  ${parts.join(', ')}</div>`);
       }
     });
 
