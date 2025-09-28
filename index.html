@@ -455,15 +455,33 @@ copyBtn.addEventListener("click",()=>{
 
 pdfBtn.addEventListener("click", () => {
     const card = document.querySelector(".card");
+
+    // Temporarily adjust styles for PDF generation if needed
+    // Example: Reduce font size slightly for PDF only
+    card.style.fontSize = "0.9em"; // You can experiment with this value
+
     const options = {
-        margin: 10,
+        margin: [5, 5, 5, 5], // Top, Left, Bottom, Right margins in mm (reduced from 10)
         filename: 'current look angles.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: {
+            // scale: 2, // Removing this to let html2pdf handle scaling automatically
+            useCORS: true, // Important if you have images from different origins
+            scrollY: 0, // Start capturing from the top of the element
+            scrollX: 0,
+            windowWidth: card.scrollWidth, // Ensure the entire width is captured
+            windowHeight: card.scrollHeight // Ensure the entire height is captured
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { avoid: ['table', '.diagrams'] } // Avoid breaking tables or diagrams
     };
-    html2pdf().from(card).set(options).save();
+
+    html2pdf().from(card).set(options).save().then(() => {
+        // Revert temporary style adjustments after PDF generation
+        card.style.fontSize = ""; // Reset font size
+    });
 });
+
 
 
   [latEl,lonEl,satLonEl,headingEl].forEach(inp=>{
