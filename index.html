@@ -108,11 +108,9 @@
       <div class="coord-item">
         <label for="heading">Heading</label>
         <input id="heading" type="text" inputmode="decimal" value="0.00" />
-        <div style="width:48px;"></div> <!-- empty col with same width as a select -->
-      </div>
+        <div style="width:48px;"></div> </div>
 
 
-      <!-- Blockage Zones -->
       <div class="coord-item" id="blockingZonesSection" style="display:block; grid-template-columns:1fr;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="font-weight:600;">Blockage Zones</label>
@@ -130,6 +128,7 @@
     <div class="actions">
       <button id="refreshBtn">Get my location</button>
       <button id="copyBtn" class="secondary" disabled>Copy</button>
+      <button id="pdfBtn" class="secondary">Generate PDF</button>
     </div>
 
     <div class="diagrams">
@@ -150,6 +149,7 @@
 
     <div id="satRangesList"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
   const relCanvas=document.getElementById("relCanvas");
   const relCtx=relCanvas.getContext('2d');
@@ -159,7 +159,7 @@
   const latDir=document.getElementById('latDir'), lonDir=document.getElementById('lonDir');
   const satLonEl=document.getElementById('satLon'), satLonDir=document.getElementById('satLonDir');
   const headingEl=document.getElementById('heading');
-  const refreshBtn=document.getElementById('refreshBtn'), copyBtn=document.getElementById('copyBtn');
+  const refreshBtn=document.getElementById('refreshBtn'), copyBtn=document.getElementById('copyBtn'), pdfBtn=document.getElementById('pdfBtn');
   const azVal=document.getElementById('azVal'), elVal=document.getElementById('elVal'), relVal=document.getElementById('relVal');
 
   const zonesTable=document.getElementById("zonesTable");
@@ -394,6 +394,7 @@ document.getElementById("visibleRange").textContent =
   relVal.textContent='REL='+formatNumber(rel);
   drawRel(rel);
   copyBtn.disabled=false;
+  pdfBtn.disabled=false;
   computeSatRangesAndRender();
 }
 
@@ -450,6 +451,18 @@ copyBtn.addEventListener("click",()=>{
     copyBtn.textContent="Copied!";
     setTimeout(()=>copyBtn.textContent="Copy",1000);
   });
+});
+
+pdfBtn.addEventListener("click", () => {
+    const card = document.querySelector(".card");
+    const options = {
+        margin: 10,
+        filename: 'current look angles.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().from(card).set(options).save();
 });
 
 
