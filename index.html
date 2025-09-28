@@ -456,15 +456,27 @@ copyBtn.addEventListener("click",()=>{
 pdfBtn.addEventListener("click", () => {
     const card = document.querySelector(".card");
 
+    // Calculate the aspect ratio of the card element.
+    const cardWidth = card.offsetWidth;
+    const cardHeight = card.offsetHeight;
+
+    // Define the dimensions of an A4 page in a simplified unit (e.g., points or arbitrary units for aspect ratio).
+    // A4 Portrait is approximately 595 x 842 points.
+    const a4Width = 595;
+    const a4Height = 842;
+
+    // Calculate the scale factor needed to fit the card onto the A4 page.
+    // We compare the width and height ratios and take the smaller one to ensure the entire content fits.
+    const scaleX = a4Width / cardWidth;
+    const scaleY = a4Height / cardHeight;
+    const scale = Math.min(scaleX, scaleY) * 0.95; // Use 0.95 to add a small buffer for margins.
+
     const options = {
         margin: [5, 5, 5, 5],
         filename: 'current look angles.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
-            // Force a desktop-like viewport size
-            width: 700,
-            windowWidth: 700,
-            windowHeight: 800,
+            scale: scale, // Apply the calculated scale factor
             useCORS: true,
             scrollY: 0,
             scrollX: 0,
@@ -475,6 +487,7 @@ pdfBtn.addEventListener("click", () => {
 
     html2pdf().from(card).set(options).save();
 });
+
 
 
 
