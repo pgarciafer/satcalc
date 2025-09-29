@@ -7,7 +7,16 @@
   <style>
     :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
     body{display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:linear-gradient(180deg,#f8fafc,#eef2ff)}
-    .card{background:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.08);padding:20px;max-width:700px;width:95%;}
+    .card {
+        background:#ffffff;
+        border-radius:12px;
+        box-shadow:0 10px 30px rgba(2,6,23,0.08);
+        padding:20px;
+        max-width:800px;   /* ⬅ increased so content fits A4 */
+        width:100%;        /* ⬅ use full width for export */
+        margin:auto;       /* ⬅ center the card */
+      }
+
     h1{font-size:18px;margin:0 0 16px;color:#0f172a;text-align:center}
     .coords{display:flex;flex-direction:column;gap:12px;margin-top:12px}
     .coord-item{
@@ -118,9 +127,11 @@
 
       <div class="coord-item" id="blockingZonesSection" style="display:block; grid-template-columns:1fr;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="font-weight:600;">Blockage Zones</label>
-          <button type="button" id="addBlockBtn">Add Blockage Zone</button>
-        </div>
+  <label style="font-weight:600;">Blockage Zones</label>
+  <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
+</div>
+
+
         <table id="zonesTable" style="display:none; width:100%;">
           <thead>
             <tr><th>AZ Start</th><th>AZ Stop</th><th></th></tr>
@@ -155,7 +166,10 @@
     <div id="satRangesList"></div>
 </div> <!-- closes .card -->
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+
   <script>
   const relCanvas=document.getElementById("relCanvas");
   const relCtx=relCanvas.getContext('2d');
@@ -294,7 +308,7 @@ function checkBlockingZones(rel) {
     tr.innerHTML=`
       <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
       <td><input type="text" inputmode="decimal" value="${formatNumber(stop)}"></td>
-      <td><button class="small secondary">Remove</button></td>
+      <td><button class="small secondary" data-html2canvas-ignore="true">Remove</button></td>
     `;
     const startInput = tr.querySelector("td:nth-child(1) input");
     const stopInput  = tr.querySelector("td:nth-child(2) input");
@@ -459,23 +473,51 @@ copyBtn.addEventListener("click",()=>{
   });
 });
 
-pdfBtn.addEventListener("click", () => {
+pdfBtn.addEventListener("click", async () => {
   const card = document.querySelector(".card");
 
-  const opt = {
-    margin: 0.2,
-    filename: "satellite-calculator.pdf",
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { 
-      scale: 2, 
-      useCORS: true,
-      windowWidth: 1024   // 👈 this is the new line
-    },
-    jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
-  };
+  // Hide buttons temporarily
+  const ignoredEls = card.querySelectorAll("[data-html2canvas-ignore='true']");
+  ignoredEls.forEach(el => el.style.visibility = "hidden");
 
-  html2pdf().set(opt).from(card).save();
+  // Use html2canvas to capture at forced desktop width
+  const canvas = await html2canvas(card, {
+    scale: 2,
+    useCORS: true,
+    windowWidth: 1200
+  });
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.98);
+
+  
+  // Create jsPDF instance (fixed)
+const { jsPDF } = window.jspdf;
+const pdf = new jsPDF({
+  orientation: "portrait",
+  unit: "pt",
+  format: "a4"
 });
+
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  // Calculate scaling to fit content in one page
+  const imgWidth = pageWidth - 40; // 20pt margins left/right
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const yOffset = (pageHeight - imgHeight) / 2; // center vertically
+
+  pdf.addImage(imgData, "JPEG", 20, yOffset, imgWidth, imgHeight);
+
+  // Save PDF
+  pdf.save("satellite-calculator.pdf");
+
+  // Restore buttons
+  ignoredEls.forEach(el => el.style.visibility = "");
+});
+
+
+
 
 
 
