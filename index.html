@@ -12,23 +12,23 @@
     .coords{display:flex;flex-direction:column;gap:12px;margin-top:12px}
     .coord-item{
       display:grid;
-      grid-template-columns: minmax(80px,140px) 1fr auto;
+      grid-template-columns: minmax(60px,100px) 1fr auto;
       align-items:center;
-      gap:8px;
+      gap:5px;
       background:#f8fafc;
-      padding:8px 12px;
+      padding:5px 11px;
       border-radius:8px;
     }
     .coord-item label{margin:0;color:#0f172a;font-weight:500;}
     .coord-item input{
       width:100%;min-width:0;text-align:center;border:none;background:transparent;
-      font-size:18px;color:#0f172a;outline:none;appearance:textfield;padding:6px 4px;
+      font-size:15px;color:#0f172a;outline:none;appearance:textfield;padding:4px 4px;
     }
     .coord-item input:focus{background:#e0f2fe;border-radius:4px;}
     .coord-item input::-webkit-outer-spin-button,
     .coord-item input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
     .coord-item select{
-      font-size:16px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;
+      font-size:13px;padding:4px 4px;border-radius:6px;border:1px solid #cbd5e1;
       background:white;color:#0f172a;min-width:48px;
     }
     .actions{display:flex;gap:8px;margin-top:14px;justify-content:center}
@@ -47,9 +47,15 @@
       .diagrams{flex-direction:column;align-items:center}
       canvas{width:100% !important;height:auto !important;max-width:300px}
     }
-    @media (min-width: 601px){
-      .diagrams{flex-direction:row;justify-content:space-around}
-      canvas{width:180px;height:180px}
+    @media (min-width: 601px) {
+  .diagrams {
+    gap: 10px; /* reduced from 20px */
+  }
+  canvas {
+    width: 150px;
+    height: 150px;
+  }
+}
     }
     #zonesTable td input {
       width: 100%;
@@ -57,11 +63,11 @@
       text-align: center;
       border: none;
       background: transparent;
-      font-size: 18px;
+      font-size: 10px;
       color: #0f172a;
       outline: none;
       appearance: textfield;
-      padding: 6px 4px;
+      padding: 3px 3px;
     }
     #zonesTable td input:focus {
       background: #e0f2fe;
