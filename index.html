@@ -143,7 +143,7 @@
 
     <div class="actions" data-html2canvas-ignore="true">
   <button id="refreshBtn">Get my location</button>
-  <button id="copyBtn" class="secondary" disabled>Copy Screenshot</button>
+  <button id="copyBtn" class="secondary" disabled>Copy values</button>
   <button id="pdfBtn" class="secondary">Generate PDF</button>
 </div>
 
@@ -441,61 +441,50 @@ document.getElementById("visibleRange").textContent =
 
 
 
+copyBtn.addEventListener("click",()=>{
+   const {lat,lon,satLon,heading}=getLatLon();
 
-copyBtn.addEventListener("click", async () => {
-  const card = document.querySelector(".card");
+  // format latitude
+  const latText = formatNumber(Math.abs(lat)) + "°" + (lat >= 0 ? "N" : "S");
 
-  // Hide buttons temporarily
-  const ignoredEls = card.querySelectorAll("[data-html2canvas-ignore='true']");
-  ignoredEls.forEach(el => el.style.visibility = "hidden");
+  // format longitude
+  const lonText = formatNumber(Math.abs(lon)) + "°" + (lon >= 0 ? "E" : "W");
 
-  // Capture card at high resolution
-  const canvas = await html2canvas(card, {
-    scale: 2,
-    useCORS: true,
-    windowWidth: 1200
+  // format satellite longitude (using your helper)
+  const satLonText = formatLonEW(satLon);
+
+  // base info
+  let text = `Lat=${latText}\nLon=${lonText}\nSatLon=${satLonText}\nHeading=${heading}\n\n`;
+
+  // add visible range (EL > MIN_ELEVATION)
+  const visibleRangeEl = document.getElementById("visibleRange");
+  if (visibleRangeEl && visibleRangeEl.textContent.trim() !== "") {
+    text += visibleRangeEl.textContent + "\n\n";
+  }
+
+  // add Blockage Zones
+  const rows = Array.from(zonesBody.querySelectorAll("tr"));
+  if (rows.length > 0) {
+    text += "Blockage Zones:\n";
+    rows.forEach((row, idx) => {
+      const start = row.cells[0].querySelector("input").value;
+      const stop  = row.cells[1].querySelector("input").value;
+      text += `  Zone ${idx+1}: ${start}°–${stop}°\n`;
+    });
+  }
+
+  // add blocking ranges (from satRangesList)
+  const ranges = satRangesList.innerText.trim();
+  if (ranges !== "") {
+    text += "Blocking ranges:\n" + ranges + "\n";
+  }
+
+  // copy to clipboard
+  navigator.clipboard.writeText(text).then(()=>{
+    copyBtn.textContent="Copied!";
+    setTimeout(()=>copyBtn.textContent="Copy",1000);
   });
-
-  // Restore buttons
-  ignoredEls.forEach(el => el.style.visibility = "");
-
-  // Scale to A4
-  const a4WidthPx = 1240;
-  const a4HeightPx = 1754;
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = a4WidthPx;
-  tempCanvas.height = a4HeightPx;
-  const ctx = tempCanvas.getContext("2d");
-
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, a4WidthPx, a4HeightPx);
-
-  const imgWidth = a4WidthPx - 100;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  const xOffset = (a4WidthPx - imgWidth) / 2;
-  const yOffset = (a4HeightPx - imgHeight) / 2;
-  ctx.drawImage(canvas, xOffset, yOffset, imgWidth, imgHeight);
-
-  // Convert to Blob
-  tempCanvas.toBlob(async (blob) => {
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob })
-      ]);
-      copyBtn.textContent = "Copied!";
-    } catch (err) {
-      alert("❌ Copy failed: " + err);
-    } finally {
-      setTimeout(() => (copyBtn.textContent = "Copy"), 1000);
-    }
-  }, "image/png");
 });
-
-
-
-
-
-
 
 
 
