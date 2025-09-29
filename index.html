@@ -55,7 +55,6 @@
     width: 150px;
     height: 150px;
   }
-}
     }
     #zonesTable td input {
       width: 100%;
@@ -154,9 +153,9 @@
     </div>
 
     <div id="satRangesList"></div>
+</div> <!-- closes .card -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
   const relCanvas=document.getElementById("relCanvas");
   const relCtx=relCanvas.getContext('2d');
@@ -460,42 +459,19 @@ copyBtn.addEventListener("click",()=>{
   });
 });
 
-pdfBtn.addEventListener("click", async () => {
+pdfBtn.addEventListener("click", () => {
   const card = document.querySelector(".card");
 
-  // Wait for the vessel image to load before proceeding.
-  await new Promise(resolve => {
-    if (vesselImg.complete) {
-      resolve();
-    } else {
-      vesselImg.onload = resolve;
-      vesselImg.onerror = resolve; // Continue even if the image fails to load
-    }
-  });
+  const opt = {
+    margin: 0.2,
+    filename: "satellite-calculator.pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
+  };
 
-  // Render the DOM to a canvas, excluding .actions and everything inside it
-const canvas = await html2canvas(card, {
-  scale: 2,
-  useCORS: true,
-  ignoreElements: (el) => el.closest("[data-html2canvas-ignore]") !== null,
+  html2pdf().set(opt).from(card).save();
 });
-
-
-  // Get the image data and trigger the download.
-  const imageData = canvas.toDataURL("image/png");
-  const link = document.createElement("a");
-  link.download = "satellite-calculator-screenshot.png";
-  link.href = imageData;
-  link.click();
-  link.remove();
-});
-
-
-
-
-
-
-
 
 
 
@@ -746,8 +722,7 @@ window.addEventListener("error", function (event) {
   msg.textContent = "⚠️ Error: " + event.message + " (line " + event.lineno + ")";
 });
 
-
   </script>
-  </div>
+  
 </body>
 </html>
