@@ -167,7 +167,8 @@
 </div> <!-- closes .card -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 
   <script>
@@ -473,6 +474,14 @@ copyBtn.addEventListener("click",()=>{
   });
 });
 
+
+
+
+
+
+
+
+
 pdfBtn.addEventListener("click", async () => {
   const card = document.querySelector(".card");
 
@@ -480,41 +489,46 @@ pdfBtn.addEventListener("click", async () => {
   const ignoredEls = card.querySelectorAll("[data-html2canvas-ignore='true']");
   ignoredEls.forEach(el => el.style.visibility = "hidden");
 
-  // Use html2canvas to capture at forced desktop width
+  // Capture card at high resolution (force desktop width so mobile looks same)
   const canvas = await html2canvas(card, {
     scale: 2,
     useCORS: true,
     windowWidth: 1200
   });
 
-  const imgData = canvas.toDataURL("image/jpeg", 0.98);
-
-  
-  // Create jsPDF instance (fixed)
-const { jsPDF } = window.jspdf;
-const pdf = new jsPDF({
-  orientation: "portrait",
-  unit: "pt",
-  format: "a4"
-});
-
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  // Calculate scaling to fit content in one page
-  const imgWidth = pageWidth - 40; // 20pt margins left/right
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  const yOffset = (pageHeight - imgHeight) / 2; // center vertically
-
-  pdf.addImage(imgData, "JPEG", 20, yOffset, imgWidth, imgHeight);
-
-  // Save PDF
-  pdf.save("satellite-calculator.pdf");
-
-  // Restore buttons
+  // Restore buttons BEFORE creating link
   ignoredEls.forEach(el => el.style.visibility = "");
+
+  // === SCALE TO A4 SIZE ===
+  const a4WidthPx = 1240;   // ≈ A4 width at 150 DPI
+  const a4HeightPx = 1754;  // ≈ A4 height at 150 DPI
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = a4WidthPx;
+  tempCanvas.height = a4HeightPx;
+  const ctx = tempCanvas.getContext("2d");
+
+  // Fill white background
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, a4WidthPx, a4HeightPx);
+
+  // Scale the captured image to fit inside A4
+  const imgWidth = a4WidthPx - 100; // 50px margin each side
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const xOffset = (a4WidthPx - imgWidth) / 2;
+  const yOffset = (a4HeightPx - imgHeight) / 2;
+  ctx.drawImage(canvas, xOffset, yOffset, imgWidth, imgHeight);
+
+  // === Download PNG ===
+  const link = document.createElement("a");
+  link.href = tempCanvas.toDataURL("image/png");
+  link.download = "satellite-calculator.png";
+  document.body.appendChild(link); // required for Firefox/iOS
+  link.click();
+  document.body.removeChild(link);
 });
+
+
+
 
 
 
