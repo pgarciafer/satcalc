@@ -143,7 +143,7 @@
 
     <div class="actions" data-html2canvas-ignore="true">
   <button id="refreshBtn">Get my location</button>
-  <button id="copyBtn" class="secondary" disabled>Copy</button>
+  <button id="copyBtn" class="secondary" disabled>Copy Screenshot</button>
   <button id="pdfBtn" class="secondary">Generate PDF</button>
 </div>
 
@@ -514,10 +514,10 @@ pdfBtn.addEventListener("click", async () => {
     windowWidth: 1200
   });
 
-  // Restore buttons BEFORE creating link
+  // Restore buttons BEFORE generating PDF
   ignoredEls.forEach(el => el.style.visibility = "");
 
-  // === SCALE TO A4 SIZE ===
+  // === SCALE TO A4 SIZE (same as before) ===
   const a4WidthPx = 1240;   // ≈ A4 width at 150 DPI
   const a4HeightPx = 1754;  // ≈ A4 height at 150 DPI
   const tempCanvas = document.createElement("canvas");
@@ -536,14 +536,19 @@ pdfBtn.addEventListener("click", async () => {
   const yOffset = (a4HeightPx - imgHeight) / 2;
   ctx.drawImage(canvas, xOffset, yOffset, imgWidth, imgHeight);
 
-  // === Download PNG ===
-  const link = document.createElement("a");
-  link.href = tempCanvas.toDataURL("image/png");
-  link.download = "satellite-calculator.png";
-  document.body.appendChild(link); // required for Firefox/iOS
-  link.click();
-  document.body.removeChild(link);
+  // === Convert scaled canvas to PDF ===
+  const imgData = tempCanvas.toDataURL("image/jpeg", 0.98);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "px",
+    format: [a4WidthPx, a4HeightPx]
+  });
+
+  pdf.addImage(imgData, "JPEG", 0, 0, a4WidthPx, a4HeightPx);
+  pdf.save("satellite-calculator.pdf");
 });
+
 
 
 
