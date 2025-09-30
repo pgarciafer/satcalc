@@ -289,6 +289,25 @@ function resizeCanvas(canvas) {
   canvas.height = rect.height * 2;
 }
 
+function adjustGraphHeight() {
+  const canvas = document.getElementById("elGraph");
+  const table = document.getElementById("zonesTable");
+  if (!canvas || !table) return;
+
+  const rowCount = table.querySelectorAll("tbody tr").length;
+  const baseHeight = 250;   // minimum height
+  const extraPerRow = 30;   // more space per row
+
+  const newHeight = baseHeight + rowCount * extraPerRow;
+
+  // CSS size
+  canvas.style.height = newHeight + "px";
+  // Internal resolution for crisp PDF export
+  canvas.height = newHeight * 2;
+}
+
+
+
 function drawElGraph(lat, lon) {
   
   const canvas = document.getElementById("elGraph");
@@ -601,8 +620,10 @@ document.getElementById("visibleRange").textContent =
   copyBtn.disabled=false;
   pdfBtn.disabled=false;
   computeSatRangesAndRender();
-  
+  adjustGraphHeight();
   drawElGraph(lat, lon);
+  
+}
   
 }
 
