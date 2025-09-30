@@ -320,9 +320,10 @@ function drawElGraph(lat, lon) {
     ctx.globalAlpha = 1.0;
   }
   shadeBand(0, MIN_ELEVATION, "red");     // The area below the MIN_ELEVATION line
-  shadeBand(MIN_ELEVATION, 35, "yellow");
-  shadeBand(35, 75, "green");
-  shadeBand(75, 90, "orange");
+  shadeBand(MIN_ELEVATION, 15, "yellow");
+  shadeBand(15, 65, "green");
+  shadeBand(65, 80, "yellow");
+  shadeBand(80, 90, "red");
 
   // --- axes ---
   ctx.strokeStyle = "black";
