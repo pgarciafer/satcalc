@@ -276,44 +276,46 @@ function drawRel(rel) {
   }
 }
 
+
 function drawElGraph(lat, lon) {
   const canvas = document.getElementById("elGraph");
-  if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const step = 1; // resolution in degrees
-  const satLons = [];
-  const elevations = [];
-
-  for (let lonSat = -180; lonSat <= 180; lonSat += step) {
-    const { el } = calcAzEl(lat, lon, lonSat);
-    satLons.push(lonSat);
-    elevations.push(el);
-  }
-
-  // scale
-  const minEl = 0;
-  const maxEl = 90;
   const margin = 40;
+  const width = canvas.width - 2 * margin;
+  const height = canvas.height - 2 * margin;
 
-  const xScale = (canvas.width - 2 * margin) / 360;
-  const yScale = (canvas.height - 2 * margin) / (maxEl - minEl);
+  const MIN_ELEVATION = 5;
 
+  // --- coordinate converters ---
   function toX(lonSat) {
-    return margin + (lonSat + 180) * xScale;
+    return margin + (lonSat + 180) * (width / 360);
   }
+
   function toY(el) {
-    return canvas.height - margin - (el - minEl) * yScale;
+    // Clamp the elevation value to a minimum of 0 to prevent
+    // the line from being drawn below the x-axis.
+    const clampedEl = Math.max(0, el);
+    return canvas.height - margin - (clampedEl / 90) * height;
   }
+  
+  // normalize longitude into [-180, 180]
+  function normalizeLon(lon) {
+    return ((lon + 180) % 360 + 360) % 360 - 180;
+  }
+
+  // --- clear canvas ---
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // --- background shading ---
   function shadeBand(elMin, elMax, color) {
+    const top = toY(elMax);
+    const bottom = toY(elMin);
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.2;
     ctx.fillRect(
-      toX(-180), toY(elMax),
-      toX(180) - toX(-180), toY(elMin) - toY(elMax)
+      toX(-180), top,
+      toX(180) - toX(-180), bottom - top
     );
     ctx.globalAlpha = 1.0;
   }
@@ -322,57 +324,74 @@ function drawElGraph(lat, lon) {
   shadeBand(75, 90, "orange");
 
   // --- axes ---
-  ctx.strokeStyle = "#000";
+  ctx.strokeStyle = "black";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(margin, margin);
-  ctx.lineTo(margin, canvas.height - margin);
-  ctx.lineTo(canvas.width - margin, canvas.height - margin);
+  ctx.moveTo(toX(-180), toY(0));
+  ctx.lineTo(toX(180), toY(0));
+  ctx.moveTo(toX(-180), toY(0));
+  ctx.lineTo(toX(-180), toY(90));
   ctx.stroke();
 
-  ctx.fillStyle = "#000";
+  // --- labels ---
+  ctx.fillStyle = "black";
   ctx.font = "12px sans-serif";
-
-  // X ticks (longitude)
-  for (let lonMark = -180; lonMark <= 180; lonMark += 30) {
-    const x = toX(lonMark);
-    ctx.beginPath();
-    ctx.moveTo(x, canvas.height - margin);
-    ctx.lineTo(x, canvas.height - margin + 5);
-    ctx.stroke();
-    ctx.textAlign = "center";
-    ctx.fillText(lonMark.toString(), x, canvas.height - margin + 15);
-  }
-
-  // Y ticks (elevation)
-  for (let elMark = 0; elMark <= 90; elMark += 15) {
-    const y = toY(elMark);
-    ctx.beginPath();
-    ctx.moveTo(margin - 5, y);
-    ctx.lineTo(margin, y);
-    ctx.stroke();
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-    ctx.fillText(elMark.toString(), margin - 8, y);
-  }
-
-  // axis labels
   ctx.textAlign = "center";
   ctx.fillText("Satellite Longitude (°)", canvas.width / 2, canvas.height - 5);
+
   ctx.save();
-  ctx.translate(15, canvas.height / 2);
+  ctx.translate(12, canvas.height / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.textAlign = "center";
   ctx.fillText("Elevation (°)", 0, 0);
   ctx.restore();
 
-  // --- curve ---
+  // --- ticks ---
+  ctx.textAlign = "center";
+  for (let lon = -180; lon <= 180; lon += 60) {
+    const x = toX(lon);
+    ctx.beginPath();
+    ctx.moveTo(x, toY(0));
+    ctx.lineTo(x, toY(0) + 5);
+    ctx.stroke();
+    // Custom label formatting logic
+    let label;
+    if (lon < 0) {
+        label = `${Math.abs(lon)}°W`;
+    } else if (lon > 0) {
+        label = `${lon}°E`;
+    } else {
+        label = `0°`;
+    }
+    ctx.fillText(label, x, toY(0) + 15);
+}
+
+  ctx.textAlign = "right";
+  for (let el = 0; el <= 90; el += 15) {
+    const y = toY(el);
+    ctx.beginPath();
+    ctx.moveTo(toX(-180), y);
+    ctx.lineTo(toX(-180) - 5, y);
+    ctx.stroke();
+    ctx.fillText(el.toString(), toX(-180) - 8, y + 3);
+  }
+
+  // --- compute curve ---
+  const satLons = [];
+  const elevations = [];
+  const step = 1;
+  for (let lonSat = -180; lonSat <= 180; lonSat += step) {
+    const { el } = calcAzEl(lat, lon, lonSat);
+    satLons.push(lonSat);
+    elevations.push(el);
+  }
+
+  // --- draw curve ---
   ctx.strokeStyle = "blue";
   ctx.lineWidth = 2;
   ctx.beginPath();
   satLons.forEach((lonSat, i) => {
     const x = toX(lonSat);
-    const y = toY(elevations[i]);
+    const y = toY(elevations[i]); // Use the corrected toY function
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
@@ -386,7 +405,33 @@ function drawElGraph(lat, lon) {
   ctx.lineTo(toX(180), toY(MIN_ELEVATION));
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // --- vertical marker for selected satellite longitude ---
+  let { satLon } = getLatLon();
+  satLon = normalizeLon(satLon);
+
+  ctx.strokeStyle = "purple";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(toX(satLon), toY(0));
+  ctx.lineTo(toX(satLon), toY(90));
+  ctx.stroke();
+
+  // label below axis
+  ctx.fillStyle = "purple";
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(formatLonEW(satLon), toX(satLon), canvas.height - margin + 28);
+
+  // --- point + label at intersection with curve ---
+  const { el: satEl } = calcAzEl(lat, lon, satLon);
+  ctx.fillStyle = "purple";
+  ctx.beginPath();
+  ctx.arc(toX(satLon), toY(satEl), 4, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.fillText(`${satEl.toFixed(1)}°`, toX(satLon), toY(satEl) - 8);
 }
+
 
 
 
@@ -506,7 +551,7 @@ function updateAll(){
   azVal.textContent='AZ='+formatNumber(az);
 
   // EL value handling
-  if (el < 0) {
+  if (el < MIN_ELEVATION) {
     elVal.innerHTML = `EL=<span style="color:red;">${formatNumber(el)} (Out of Range)</span>`;
   } else {
     elVal.textContent = 'EL=' + formatNumber(el);
