@@ -289,27 +289,30 @@ function resizeCanvas(canvas) {
   canvas.height = rect.height * 2;
 }
 
-function adjustGraphHeight() {
-  const canvas = document.getElementById("elGraph");
-  const table = document.getElementById("zonesTable");
-  if (!canvas || !table) return;
+// === NEW: dynamic graph height ===
+  function adjustGraphHeight() {
+    const canvas = document.getElementById("elGraph");
+    const table = document.getElementById("zonesTable");
+    if (!canvas || !table) return;
 
-  const rowCount = table.querySelectorAll("tbody tr").length;
-  const baseHeight = 250;   // minimum height
-  const extraPerRow = 30;   // more space per row
+    const rowCount = table.querySelectorAll("tbody tr").length;
+    const baseHeight = 250;
+    const extraPerRow = 30;
+    const newHeight = baseHeight + rowCount * extraPerRow;
 
-  const newHeight = baseHeight + rowCount * extraPerRow;
+    // CSS height
+    canvas.style.height = newHeight + "px";
 
-  // CSS size
-  canvas.style.height = newHeight + "px";
-  // Internal resolution for crisp PDF export
-  canvas.height = newHeight * 2;
+    // Retina scale for sharp PDF
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = newHeight * 2;
 }
 
 
 
 function drawElGraph(lat, lon) {
-  
+  adjustGraphHeight();
   const canvas = document.getElementById("elGraph");
 resizeCanvas(canvas);
 const ctx = canvas.getContext("2d");
@@ -620,7 +623,6 @@ document.getElementById("visibleRange").textContent =
   copyBtn.disabled=false;
   pdfBtn.disabled=false;
   computeSatRangesAndRender();
-  adjustGraphHeight();
   drawElGraph(lat, lon);
   
 }
