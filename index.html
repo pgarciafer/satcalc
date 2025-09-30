@@ -746,18 +746,6 @@ pdfBtn.addEventListener("click", async () => {
   pdf.save("satellite-calculator.pdf");
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
 [latEl, lonEl, satLonEl].forEach(inp=>{
   inp.addEventListener("blur",()=>{
     normalizeInput(inp,180);   // lat/lon/satLon limited to ±180
