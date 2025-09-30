@@ -550,15 +550,21 @@ pdfBtn.addEventListener("click", async () => {
 
 
 
-  [latEl,lonEl,satLonEl,headingEl].forEach(inp=>{
-    inp.addEventListener("blur",()=>{
-      normalizeInput(inp,180);
-      if(inp===headingEl) normalizeInput(inp,360);
-      updateAll();
-    });
-    inp.addEventListener("input",updateAll);
-    inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
+[latEl, lonEl, satLonEl].forEach(inp=>{
+  inp.addEventListener("blur",()=>{
+    normalizeInput(inp,180);   // lat/lon/satLon limited to ±180
+    updateAll();
   });
+  inp.addEventListener("input",updateAll);
+  inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
+});
+
+headingEl.addEventListener("blur",()=>{
+  normalizeInput(headingEl,360);   // heading limited to 0–360
+  updateAll();
+});
+headingEl.addEventListener("input",updateAll);
+headingEl.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
   [latDir,lonDir,satLonDir].forEach(sel=>sel.addEventListener("change",updateAll));
 
   // === SATELLITE RANGE CALCULATION ===
