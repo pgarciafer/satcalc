@@ -319,9 +319,10 @@ function drawElGraph(lat, lon) {
     );
     ctx.globalAlpha = 1.0;
   }
-  shadeBand(5, 35, "yellow");
-  shadeBand(35, 75, "green");
-  shadeBand(75, 90, "orange");
+  shadeBand(5, 20, "yellow");
+  shadeBand(20, 65, "green");
+  shadeBand(65, 80, "orange");
+  shadeBand(80, 90, "red");
 
   // --- axes ---
   ctx.strokeStyle = "black";
