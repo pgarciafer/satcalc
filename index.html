@@ -154,6 +154,14 @@
         <div id="visibleRange" style="font-weight:bold; margin-top:4px;"></div>
       </div>
     </div>
+    
+    
+    <div class="diagrams">
+  <div class="diagram">
+    <canvas id="elGraph" width="400" height="200"></canvas>
+  </div>
+</div>
+    
 
     <div class="diagrams">
       <div class="diagram">
@@ -267,6 +275,120 @@ function drawRel(rel) {
     blockMsg.style.display = "none";
   }
 }
+
+function drawElGraph(lat, lon) {
+  const canvas = document.getElementById("elGraph");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const step = 1; // resolution in degrees
+  const satLons = [];
+  const elevations = [];
+
+  for (let lonSat = -180; lonSat <= 180; lonSat += step) {
+    const { el } = calcAzEl(lat, lon, lonSat);
+    satLons.push(lonSat);
+    elevations.push(el);
+  }
+
+  // scale
+  const minEl = 0;
+  const maxEl = 90;
+  const margin = 40;
+
+  const xScale = (canvas.width - 2 * margin) / 360;
+  const yScale = (canvas.height - 2 * margin) / (maxEl - minEl);
+
+  function toX(lonSat) {
+    return margin + (lonSat + 180) * xScale;
+  }
+  function toY(el) {
+    return canvas.height - margin - (el - minEl) * yScale;
+  }
+
+  // --- background shading ---
+  function shadeBand(elMin, elMax, color) {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(
+      toX(-180), toY(elMax),
+      toX(180) - toX(-180), toY(elMin) - toY(elMax)
+    );
+    ctx.globalAlpha = 1.0;
+  }
+  shadeBand(5, 35, "yellow");
+  shadeBand(35, 75, "green");
+  shadeBand(75, 90, "orange");
+
+  // --- axes ---
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin, margin);
+  ctx.lineTo(margin, canvas.height - margin);
+  ctx.lineTo(canvas.width - margin, canvas.height - margin);
+  ctx.stroke();
+
+  ctx.fillStyle = "#000";
+  ctx.font = "12px sans-serif";
+
+  // X ticks (longitude)
+  for (let lonMark = -180; lonMark <= 180; lonMark += 30) {
+    const x = toX(lonMark);
+    ctx.beginPath();
+    ctx.moveTo(x, canvas.height - margin);
+    ctx.lineTo(x, canvas.height - margin + 5);
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillText(lonMark.toString(), x, canvas.height - margin + 15);
+  }
+
+  // Y ticks (elevation)
+  for (let elMark = 0; elMark <= 90; elMark += 15) {
+    const y = toY(elMark);
+    ctx.beginPath();
+    ctx.moveTo(margin - 5, y);
+    ctx.lineTo(margin, y);
+    ctx.stroke();
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(elMark.toString(), margin - 8, y);
+  }
+
+  // axis labels
+  ctx.textAlign = "center";
+  ctx.fillText("Satellite Longitude (°)", canvas.width / 2, canvas.height - 5);
+  ctx.save();
+  ctx.translate(15, canvas.height / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.fillText("Elevation (°)", 0, 0);
+  ctx.restore();
+
+  // --- curve ---
+  ctx.strokeStyle = "blue";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  satLons.forEach((lonSat, i) => {
+    const x = toX(lonSat);
+    const y = toY(elevations[i]);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // --- min elevation cutoff line ---
+  ctx.strokeStyle = "red";
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  ctx.moveTo(toX(-180), toY(MIN_ELEVATION));
+  ctx.lineTo(toX(180), toY(MIN_ELEVATION));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+
 
 function formatLonEW(lon) {
   if (lon > 0) return formatNumber(lon) + "°E";
@@ -417,6 +539,9 @@ document.getElementById("visibleRange").textContent =
   copyBtn.disabled=false;
   pdfBtn.disabled=false;
   computeSatRangesAndRender();
+  
+  drawElGraph(lat, lon);
+  
 }
 
 
