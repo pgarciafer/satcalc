@@ -92,6 +92,23 @@
       .card { max-width: 100%; }
       .button-row { flex-direction: column; }
     }
+    
+    
+    .pdf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 12px;
+  width: 100%;
+  font-size: 14px;
+}
+
+.pdf-cell {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
+    
+    
   </style>
 </head>
 <body>
@@ -163,6 +180,12 @@
       <div id="satRangesList"></div>
     </div>
   </div>
+  
+  
+  <div id="pdfLayout" style="display:none;"></div>
+  
+  
+  
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -663,33 +686,43 @@ copyBtn.addEventListener("click",()=>{
 });
 
 
-
 pdfBtn.addEventListener("click", () => {
-  const card = document.querySelector(".card");
-
-  // Hide buttons
-  const ignoredEls = card.querySelectorAll("[data-html2canvas-ignore='true']");
-  ignoredEls.forEach(el => el.style.visibility = "hidden");
-
-  // Redraw EL graph at final size for PDF
   const { lat, lon } = getLatLon();
-  drawElGraph(lat, lon);
+  drawElGraph(lat, lon); // redraw graphs at final resolution
 
+  // Build layout
+  const pdfLayout = document.getElementById("pdfLayout");
+  pdfLayout.innerHTML = `
+    <div class="pdf-grid">
+      <div class="pdf-cell" id="pdf-latlon"></div>
+      <div class="pdf-cell" id="pdf-blockzones"></div>
+      <div class="pdf-cell" id="pdf-az-el"></div>
+      <div class="pdf-cell" id="pdf-vessel"></div>
+      <div class="pdf-cell" id="pdf-elgraph"></div>
+      <div class="pdf-cell" id="pdf-satranges"></div>
+    </div>
+  `;
+
+  // Clone or move content into cells
+  document.getElementById("pdf-latlon").appendChild(document.querySelector(".coords").cloneNode(true));
+  document.getElementById("pdf-blockzones").appendChild(document.getElementById("blockingZonesSection").cloneNode(true));
+  document.getElementById("pdf-az-el").appendChild(document.querySelector(".diagram-info").cloneNode(true));
+  document.getElementById("pdf-vessel").appendChild(document.getElementById("vesselCanvas").cloneNode(true));
+  document.getElementById("pdf-elgraph").appendChild(document.getElementById("elGraph").cloneNode(true));
+  document.getElementById("pdf-satranges").appendChild(document.getElementById("satRangesList").cloneNode(true));
+
+  // Export PDF
   const opt = {
     margin:       [10, 10, 10, 10],
     filename:     'Satellite_Look_Angle.pdf',
     image:        { type: 'png', quality: 1.0 },
-    html2canvas:  { scale: 2, useCORS: true, scrollY: -window.scrollY },
+    html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak:    { mode: ['avoid-all', 'css'] }
   };
 
-  html2pdf().set(opt).from(card).save().finally(() => {
-    ignoredEls.forEach(el => el.style.visibility = "");
-  });
+  html2pdf().set(opt).from(pdfLayout).save();
 });
-
-
 
 [latEl, lonEl, satLonEl].forEach(inp=>{
   inp.addEventListener("blur",()=>{
