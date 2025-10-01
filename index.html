@@ -66,6 +66,7 @@
   }
     }
     
+
 #zonesTable {
   border-collapse: collapse;
   width: 100%;
@@ -91,8 +92,32 @@
   font-size: 12px;
   border: 1px solid #ccc;
   border-radius: 3px;
-  padding: 0;            /* removes extra spacing */
+  padding: 0;
 }
+
+/* Delete (×) button */
+#zonesTable td button {
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  font-size: 14px;
+  border: none;
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  float: right;          /* align flush right */
+}
+
+#zonesTable td button:hover {
+  background: #c0392b;
+}
+
+
+
+
     #zonesTable td input:focus {
       background: #e0f2fe;
       border-radius: 4px;
