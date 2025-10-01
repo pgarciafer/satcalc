@@ -58,58 +58,86 @@
 
     canvas{background:white;border-radius:8px;}
 
+    .diagram {
+      display: flex;
+      justify-content: center; /* horizontal centering */
+      align-items: center;     /* vertical centering */
+      flex-direction: column;  /* stack canvas and any messages vertically */
+      width: 100%;
+    }
+
+    #relCanvas { width: 100%; max-width: 400px; height: auto; }
+    #elGraph { width: 80%; max-width: 500px; aspect-ratio: 2 / 1; }
+
     /* === NEW GRID LAYOUT === */
     .main-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: auto auto auto;
-      gap: 20px;
-      margin-top: 12px;
+      grid-template-columns: 1fr 1fr;  /* Top row: 2 columns */
+      grid-template-rows: auto auto auto;   /* Top row + buttons row */
+      gap: 5px;
+	  margin-top: 12px;
     }
 
     .actions {
-      grid-column: 1 / span 2;
+      grid-column: 1 / span 2;  /* buttons span full width */
       display: flex;
       justify-content: center;
       gap: 8px;
+      margin-bottom: 20px;
     }
 
-    .coords, .blocking-section, .diagram, .diagram-info, #satRangesList {
-      width: 100%;
-    }
+    /* Bottom stacked sections */
+.bottom-sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* horizontal centering */
+  justify-content: center;  /* vertical centering */
+  gap: 10px;                /* reduce spacing between REL and EL graphs */
+  grid-column: 1 / span 2;  /* span full width */
+  height: auto;             /* allow section to shrink to content */
+  margin-top: 12px;
+}
 
-    #elGraph {
-      width: 80%;
-      max-width: 600px;
-      aspect-ratio: 2 / 1;
-    }
-	
-	.diagram {
+.diagram {
   display: flex;
   justify-content: center; /* horizontal centering */
-  align-items: center;     /* vertical centering */
-  flex-direction: column;  /* stack canvas and any messages vertically */
+  align-items: center;     /* vertical centering inside diagram */
+  flex-direction: column;  /* stack canvas + messages vertically */
   width: 100%;
+  margin: 0;
 }
 
 
-    #relCanvas {
-      width: 100%;
-      max-width: 300px;
-      height: auto;
-    }
+    .coords, .blocking-section, .diagram-info, #satRangesList { width: 100%; }
 
     @media (max-width:700px){
-      .main-grid {
-        grid-template-columns: 1fr;
-      }
-      .actions {
-        justify-content: space-around;
-      }
-      #elGraph, #relCanvas {
-        width: 100%;
-      }
+      .main-grid { grid-template-columns: 1fr; }
+      .actions { justify-content: space-around; }
+      #elGraph, #relCanvas { width: 100%; }
     }
+	
+	.diagram-info {
+  display: flex;
+  flex-direction: column;   /* stack AZ/EL/REL vertically */
+  align-items: center;      /* center horizontally */
+  justify-content: center;  /* optional: center vertically within container */
+  text-align: center;       /* ensure text is centered */
+  gap: 6px;                 /* spacing between lines */
+  width: 100%;
+}
+
+.bottom-sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* horizontal centering */
+  justify-content: center;  /* vertical centering */
+  gap: 20px;
+  grid-column: 1 / span 2;  /* span full width */
+}
+
+
+
+
   </style>
 </head>
 <body>
@@ -153,35 +181,33 @@
         </table>
       </div>
 
-      <!-- Row2: Buttons -->
+      <!-- Buttons row -->
       <div class="actions" data-html2canvas-ignore="true">
         <button id="refreshBtn">Get my location</button>
         <button id="copyBtn" class="secondary" disabled>Copy values</button>
         <button id="pdfBtn" class="secondary">Generate PDF</button>
       </div>
 
-      <!-- Row2, Col1: AZ/EL/REL/Visible -->
-      <div class="diagram-info">
-        <div id="azVal">AZ=</div>
-        <div id="elVal">EL=</div>
-		<div id="relVal" style="font-weight:bold">REL=</div>
-        <div id="visibleRange" style="font-weight:bold; margin-top:4px;"></div>
-        
-      </div>
+      <!-- Bottom stacked sections -->
+      <div class="bottom-sections">
+        <div class="diagram-info">
+          <div id="azVal">AZ=</div>
+          <div id="elVal">EL=</div>
+          <div id="relVal" style="font-weight:bold">REL=</div>
+          <div id="visibleRange" style="font-weight:bold; margin-top:4px;"></div>
+        </div>
 
-      <!-- Row2, Col2: REL graph -->
-      <div class="diagram">
-        <canvas id="relCanvas" width="300" height="300"></canvas>
-        <div id="blockMsg" style="color:red; font-size:13px; display:none;"></div>
-      </div>
+        <div class="diagram">
+          <canvas id="relCanvas" width="300" height="300"></canvas>
+          <div id="blockMsg" style="color:red; font-size:13px; display:none;"></div>
+        </div>
 
-      <!-- Row3, Col1: EL graph -->
-      <div class="diagram">
-        <canvas id="elGraph"></canvas>
-      </div>
+        <div class="diagram">
+          <canvas id="elGraph"></canvas>
+        </div>
 
-      <!-- Row3, Col2: Satellite Range List -->
-      <div id="satRangesList"></div>
+        <div id="satRangesList"></div>
+      </div>
     </div>
   </div>
 
