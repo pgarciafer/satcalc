@@ -371,6 +371,12 @@ function resizeCanvas(canvas) {
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * 2;
     canvas.height = newHeight * 2;
+    
+    // 🔥 Match REL graph size
+  relCanvas.style.width = newHeight + "px";  // keep square
+  relCanvas.style.height = newHeight + "px";
+  relCanvas.width = newHeight * 2;
+  relCanvas.height = newHeight * 2;
 }
 
 
