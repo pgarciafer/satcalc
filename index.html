@@ -101,6 +101,20 @@
   height: auto;       /* keep aspect ratio */
   aspect-ratio: 2 / 1; /* keeps it wide */
 }
+
+
+.coords-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* left = coords, right = blockage zones */
+  gap: 20px;
+  margin-top: 12px;
+}
+
+@media (max-width: 700px) {
+  .coords-wrapper {
+    grid-template-columns: 1fr; /* stack on small screens */
+  }
+}
     
   </style>
 </head>
@@ -108,46 +122,49 @@
   <div class="card" role="region" aria-label="Device coordinates">
     <h1>Satellite Look Angle Calculator</h1>
 
-    <div class="coords" aria-live="polite">
-      <div class="coord-item">
-        <label for="lat">Latitude</label>
-        <input id="lat" type="text" inputmode="decimal" value="38.88" />
-        <select id="latDir"><option value="N" selected>N</option><option value="S">S</option></select>
-      </div>
-
-      <div class="coord-item">
-        <label for="lon">Longitude</label>
-        <input id="lon" type="text" inputmode="decimal" value="1.40" />
-        <select id="lonDir"><option value="E" selected>E</option><option value="W">W</option></select>
-      </div>
-
-      <div class="coord-item">
-        <label for="satLon">Satellite Longitude</label>
-        <input id="satLon" type="text" inputmode="decimal" value="18.00" />
-        <select id="satLonDir"><option value="E">E</option><option value="W" selected>W</option></select>
-      </div>
-
-      <div class="coord-item">
-        <label for="heading">Heading</label>
-        <input id="heading" type="text" inputmode="decimal" value="0.00" />
-        <div style="width:48px;"></div> </div>
-
-
-      <div class="coord-item" id="blockingZonesSection" style="display:block; grid-template-columns:1fr;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-  <label style="font-weight:600;">Blockage Zones</label>
-  <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
-</div>
-
-
-        <table id="zonesTable" style="display:none; width:100%;">
-          <thead>
-            <tr><th>AZ Start</th><th>AZ Stop</th><th></th></tr>
-          </thead>
-          <tbody id="zonesBody"></tbody>
-        </table>
-      </div>
+    <div class="coords-wrapper">
+  <!-- Left column: Lat / Lon / Sat Lon / Heading -->
+  <div class="coords" aria-live="polite">
+    <div class="coord-item">
+      <label for="lat">Latitude</label>
+      <input id="lat" type="text" inputmode="decimal" value="38.88" />
+      <select id="latDir"><option value="N" selected>N</option><option value="S">S</option></select>
     </div>
+
+    <div class="coord-item">
+      <label for="lon">Longitude</label>
+      <input id="lon" type="text" inputmode="decimal" value="1.40" />
+      <select id="lonDir"><option value="E" selected>E</option><option value="W">W</option></select>
+    </div>
+
+    <div class="coord-item">
+      <label for="satLon">Satellite Longitude</label>
+      <input id="satLon" type="text" inputmode="decimal" value="18.00" />
+      <select id="satLonDir"><option value="E">E</option><option value="W" selected>W</option></select>
+    </div>
+
+    <div class="coord-item">
+      <label for="heading">Heading</label>
+      <input id="heading" type="text" inputmode="decimal" value="0.00" />
+      <div style="width:48px;"></div>
+    </div>
+  </div>
+
+  <!-- Right column: Blockage Zones -->
+  <div class="blocking-section" id="blockingZonesSection" style="display:block;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <label style="font-weight:600;">Blockage Zones</label>
+      <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
+    </div>
+
+    <table id="zonesTable" style="display:none; width:100%;">
+      <thead>
+        <tr><th>AZ Start</th><th>AZ Stop</th><th></th></tr>
+      </thead>
+      <tbody id="zonesBody"></tbody>
+    </table>
+  </div>
+</div>
 
     <div class="actions" data-html2canvas-ignore="true">
   <button id="refreshBtn">Get my location</button>
