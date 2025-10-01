@@ -137,11 +137,17 @@
     }
     
     #elGraph {
-  width: 70%;        /* take full width of parent */
-  max-width: 900px;   /* cap on big screens */
+  width: 60%;        /* take full width of parent */
+  max-width: 600px;   /* cap on big screens */
   height: auto;       /* keep aspect ratio */
   aspect-ratio: 2 / 1; /* keeps it wide */
 }
+
+/* REL graph → bigger */
+#relCanvas {
+  width: 300px;   /* larger display size */
+  height: 300px;
+
 
 
 .coords-wrapper {
@@ -233,7 +239,7 @@
       <div class="diagram">
         <div id="relVal">REL=</div>
         <div id="blockMsg" style="color:red; font-size:13px; display:none;"></div>
-        <canvas id="relCanvas" width="200" height="200"></canvas>
+        <canvas id="relCanvas" width="300" height="300"></canvas>
       </div>
     </div>
 
