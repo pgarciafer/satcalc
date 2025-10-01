@@ -5,177 +5,101 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Satellite Look Angle Calculator</title>
   <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
-    body{display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:linear-gradient(180deg,#f8fafc,#eef2ff)}
-    .card {
-      background:#ffffff;
-      border-radius:12px;
-      box-shadow:0 10px 30px rgba(2,6,23,0.08);
-      padding:20px;
-      max-width:1000px;
-      width:100%;
-      margin:auto;
-    }
-
-    h1{font-size:18px;margin:0 0 16px;color:#0f172a;text-align:center}
-    .coord-item{
-      display:grid;
-      grid-template-columns: minmax(60px,100px) 1fr auto;
-      align-items:center;
-      gap:5px;
-      background:#f8fafc;
-      padding:5px 11px;
-      border-radius:8px;
-      margin-bottom:6px;
-    }
-    .coord-item label{margin:0;color:#0f172a;font-weight:500;}
-    .coord-item input{
-      width:100%;min-width:0;text-align:center;border:none;background:transparent;
-      font-size:15px;color:#0f172a;outline:none;appearance:textfield;padding:4px 4px;
-    }
-    .coord-item input:focus{background:#e0f2fe;border-radius:4px;}
-    .coord-item input::-webkit-outer-spin-button,
-    .coord-item input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-    .coord-item select{
-      font-size:13px;padding:4px 4px;border-radius:6px;border:1px solid #cbd5e1;
-      background:white;color:#0f172a;min-width:48px;
-    }
-
-    button{padding:8px 12px;border-radius:8px;border:0;background:#0ea5a4;color:white;cursor:pointer;font-weight:500}
-    button.secondary{background:#64748b}
-    button.small{padding:4px 8px;font-size:13px}
-
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{text-align:center;padding:6px;border-bottom:1px solid #e2e8f0}
-    th{color:#0f172a;font-weight:600}
-    td input{width:90px;text-align:center}
-    #zonesTable td button{width:24px;height:24px;font-size:14px;border:none;background:#e74c3c;color:#fff;border-radius:3px;cursor:pointer;padding:0;float:right}
-    #zonesTable td button:hover{background:#c0392b}
-    #zonesTable td input:focus {background: #e0f2fe;border-radius: 4px;}
-    #satRangesList {margin-top:12px;font-size:14px;line-height:1.4;}
-    .zone-range { margin: 4px 0; }
-    .zone-range .color {display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;}
-
-    canvas{background:white;border-radius:8px;}
-
-    .diagram {
-      display: flex;
-      justify-content: center; /* horizontal centering */
-      align-items: center;     /* vertical centering */
-      flex-direction: column;  /* stack canvas and any messages vertically */
-      width: 100%;
-    }
-
-    #relCanvas { width: 100%; max-width: 400px; height: auto; }
-    #elGraph { width: 80%; max-width: 500px; aspect-ratio: 2 / 1; }
-
-    /* === NEW GRID LAYOUT === */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;  /* Top row: 2 columns */
-      grid-template-rows: auto auto auto;   /* Top row + buttons row */
-      gap: 5px;
-	  margin-top: 12px;
-    }
-
-    .actions {
-      grid-column: 1 / span 2;  /* buttons span full width */
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; }
+    body {
       display: flex;
       justify-content: center;
-      gap: 8px;
-      margin-bottom: 20px;
+      align-items: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(180deg,#f8fafc,#eef2ff);
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+      padding: 20px;
+      width: 100%;
+      max-width: 500px;
+    }
+    h1 { font-size: 18px; margin-bottom: 16px; color: #0f172a; text-align: center; }
+
+    .coord-item {
+      display: grid;
+      grid-template-columns: minmax(60px,100px) 1fr auto;
+      align-items: center;
+      gap: 5px;
+      background: #f8fafc;
+      padding: 5px 11px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .coord-item label { margin: 0; color: #0f172a; font-weight: 500; }
+    .coord-item input {
+      width: 100%; min-width: 0; text-align: center;
+      border: none; background: transparent;
+      font-size: 15px; color: #0f172a; outline: none; padding: 4px 4px;
+    }
+    .coord-item input:focus { background: #e0f2fe; border-radius: 4px; }
+    .coord-item select {
+      font-size: 13px; padding: 4px 4px; border-radius: 6px; border: 1px solid #cbd5e1;
+      background: white; color: #0f172a; min-width: 48px;
     }
 
-    /* Bottom stacked sections */
-.bottom-sections {
-  display: flex;
-  flex-direction: column;
-  align-items: center;      /* horizontal centering */
-  justify-content: center;  /* vertical centering */
-  gap: 10px;                /* reduce spacing between REL and EL graphs */
-  grid-column: 1 / span 2;  /* span full width */
-  height: auto;             /* allow section to shrink to content */
-  margin-top: 12px;
-}
+    button {
+      padding: 8px 12px; border-radius: 8px; border: 0; background: #0ea5a4; color: white;
+      cursor: pointer; font-weight: 500; margin-bottom: 10px;
+    }
+    button.secondary { background: #64748b; }
+    button.small { padding: 4px 8px; font-size: 13px; width: auto; }
 
-.diagram {
-  display: flex;
-  justify-content: center; /* horizontal centering */
-  align-items: center;     /* vertical centering inside diagram */
-  flex-direction: column;  /* stack canvas + messages vertically */
-  width: 100%;
-  margin: 0;
-}
+    /* New: Button row */
+    .button-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
 
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { text-align: center; padding: 6px; border-bottom: 1px solid #e2e8f0; }
+    th { color: #0f172a; font-weight: 600; }
+    td input { width: 90px; text-align: center; }
+    #zonesTable td button { width: 24px; height: 24px; font-size: 14px; border: none; background: #e74c3c; color: #fff; border-radius: 3px; cursor: pointer; padding: 0; float: right; }
+    #zonesTable td button:hover { background: #c0392b; }
+    #zonesTable td input:focus { background: #e0f2fe; border-radius: 4px; }
 
-    .coords, .blocking-section, .diagram-info, #satRangesList { width: 100%; }
+    #satRangesList { margin-top: 12px; font-size: 14px; line-height: 1.4; }
 
-@media (max-width:700px){
-  /* Make the grid single-column */
-  .main-grid { 
-    grid-template-columns: 1fr; 
-  }
+    .zone-range { margin: 4px 0; }
+    .zone-range .color { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
 
-  /* Center buttons nicely */
-  .actions { 
-    justify-content: space-around; 
-  }
+    canvas { background: white; border-radius: 8px; width: 100%; }
 
-  /* Make sections full-width */
-  .coords, 
-  .blocking-section, 
-  .diagram, 
-  .diagram-info, 
-  #satRangesList {
-    width: 100%;
-  }
+    .diagram { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; }
 
-  /* Make canvases responsive */
-  #elGraph, #relCanvas {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-  }
+    .diagram-info { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 6px; }
+    .diagram-info div { margin-bottom: 4px; }
 
-  /* Stack bottom sections with spacing */
-  .bottom-sections {
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-  }
-}
+    /* All sections stacked in a single column */
+    .main-column { display: flex; flex-direction: column; gap: 12px; }
 
-	
-	.diagram-info {
-  display: flex;
-  flex-direction: column;   /* stack AZ/EL/REL vertically */
-  align-items: center;      /* center horizontally */
-  justify-content: center;  /* optional: center vertically within container */
-  text-align: center;       /* ensure text is centered */
-  gap: 6px;                 /* spacing between lines */
-  width: 100%;
-}
+    .blocking-section { width: 100%; }
+    .blocking-section label { font-weight: 600; margin-bottom: 4px; display: block; }
 
-.bottom-sections {
-  display: flex;
-  flex-direction: column;
-  align-items: center;      /* horizontal centering */
-  justify-content: center;  /* vertical centering */
-  gap: 20px;
-  grid-column: 1 / span 2;  /* span full width */
-}
-
-
-
-
+    @media (max-width: 600px) {
+      .card { max-width: 100%; }
+      .button-row { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
   <div class="card" role="region" aria-label="Device coordinates">
     <h1>Satellite Look Angle Calculator</h1>
 
-    <div class="main-grid">
-      <!-- Row1, Col1: Lat/Lon/Sat Lon/Heading -->
+    <div class="main-column">
+      <!-- Coordinates -->
       <div class="coords" aria-live="polite">
         <div class="coord-item">
           <label for="lat">Latitude</label>
@@ -199,45 +123,44 @@
         </div>
       </div>
 
-      <!-- Row1, Col2: Blockage Zones -->
+      <!-- Buttons on same row -->
+      <div class="button-row">
+        <button id="refreshBtn" class="small">Get Location</button>
+        <button id="copyBtn" class="small secondary" disabled>Copy</button>
+        <button id="pdfBtn" class="small secondary">PDF</button>
+      </div>
+
+      <!-- Blockage Zones -->
       <div class="blocking-section" id="blockingZonesSection">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="font-weight:600;">Blockage Zones</label>
-          <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
-        </div>
-        <table id="zonesTable" style="display:none; width:100%;">
+        <label>Blockage Zones</label>
+        <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
+        <table id="zonesTable" style="display:none;">
           <thead><tr><th>AZ Start</th><th>AZ Stop</th><th></th></tr></thead>
           <tbody id="zonesBody"></tbody>
         </table>
       </div>
 
-      <!-- Buttons row -->
-      <div class="actions" data-html2canvas-ignore="true">
-        <button id="refreshBtn">Get my location</button>
-        <button id="copyBtn" class="secondary" disabled>Copy values</button>
-        <button id="pdfBtn" class="secondary">Generate PDF</button>
+      <!-- Diagram Info -->
+      <div class="diagram-info">
+        <div id="azVal">AZ=</div>
+        <div id="elVal">EL=</div>
+        <div id="relVal" style="font-weight:bold">REL=</div>
+        <div id="visibleRange" style="font-weight:bold;"></div>
       </div>
 
-      <!-- Bottom stacked sections -->
-      <div class="bottom-sections">
-        <div class="diagram-info">
-          <div id="azVal">AZ=</div>
-          <div id="elVal">EL=</div>
-          <div id="relVal" style="font-weight:bold">REL=</div>
-          <div id="visibleRange" style="font-weight:bold; margin-top:4px;"></div>
-        </div>
-
-        <div class="diagram">
-          <canvas id="relCanvas" width="300" height="300"></canvas>
-          <div id="blockMsg" style="color:red; font-size:13px; display:none;"></div>
-        </div>
-
-        <div class="diagram">
-          <canvas id="elGraph"></canvas>
-        </div>
-
-        <div id="satRangesList"></div>
+      <!-- Diagrams -->
+	  	  <div class="diagram">
+		<canvas id="vesselCanvas" width="300" height="300"></canvas>
+	  </div>
+	  
+      <div class="diagram">
+        <canvas id="elGraph" width="300" height="150"></canvas>
       </div>
+	  
+
+
+
+      <div id="satRangesList"></div>
     </div>
   </div>
 
@@ -245,9 +168,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-  const relCanvas=document.getElementById("relCanvas");
-  const relCtx=relCanvas.getContext('2d');
-  const blockMsg=document.getElementById("blockMsg");
 
   const latEl=document.getElementById('lat'), lonEl=document.getElementById('lon');
   const latDir=document.getElementById('latDir'), lonDir=document.getElementById('lonDir');
@@ -277,99 +197,37 @@
     return (Math.round(num * 100) / 100).toString().replace(/\.00$/, "");
   }
 
-  function drawZone(start, stop, isActive, index) {
-    let startAZ = (start + 360) % 360;
-    let stopAZ  = (stop  + 360) % 360;
-    if (stopAZ < startAZ) stopAZ += 360;
 
-    const baseColor = zoneColors[(index - 1) % zoneColors.length];
-    const fillColor = isActive ? baseColor.replace("0.25", "0.45") : baseColor;
-
-    relCtx.save();
-    relCtx.translate(100, 100);
-    relCtx.fillStyle = fillColor;
-    relCtx.beginPath();
-    relCtx.moveTo(0, 0);
-    relCtx.arc(0, 0, 80, (startAZ - 90) * Math.PI / 180, (stopAZ - 90) * Math.PI / 180, false);
-    relCtx.closePath();
-    relCtx.fill();
-    relCtx.restore();
-  }
-
-function drawRel(rel) {
-  relCtx.clearRect(0, 0, 200, 200);
-
-  if (!vesselImg.complete) {
-    vesselImg.onload = () => drawRel(rel);
-    return;
-  }
-
-  relCtx.save();
-  relCtx.translate(100, 100);
-  relCtx.drawImage(vesselImg, -110, -110, 220, 220);
-  relCtx.restore();
-
-  const results = checkBlockingZones(rel);
-
-  const rows = zonesBody.querySelectorAll("tr");
-  rows.forEach((row, idx) => {
-    const start = parseFloat(row.cells[0].querySelector("input").value);
-    const stop  = parseFloat(row.cells[1].querySelector("input").value);
-    if (isNaN(start) || isNaN(stop)) return;
-    const isActive = results && results.some(r => r.index === idx + 1);
-    drawZone(start, stop, isActive, idx + 1);
-  });
-
-  const rad = (rel - 90) * Math.PI / 180;
-  relCtx.strokeStyle = results && results.length
-    ? zoneColors[(results[0].index - 1) % zoneColors.length].replace("0.25", "1.0")
-    : "blue";
-  relCtx.lineWidth = 2;
-  relCtx.beginPath();
-  relCtx.moveTo(100, 100);
-  relCtx.lineTo(100 + 70 * Math.cos(rad), 100 + 70 * Math.sin(rad));
-  relCtx.stroke();
-
-  if (results && results.length) {
-    const msg = results.map(r => `zone ${r.index}`).join(", ");
-    const zoneColor = zoneColors[(results[0].index - 1) % zoneColors.length].replace("0.25", "1.0");
-    blockMsg.textContent = `Entered in block ${msg}`;
-    blockMsg.style.display = "block";
-    blockMsg.style.color = zoneColor;
-  } else {
-    blockMsg.style.display = "none";
-  }
-}
 function resizeCanvas(canvas) {
   const rect = canvas.getBoundingClientRect();
   canvas.width = rect.width * 2;   // ×2 for retina / PDF sharpness
   canvas.height = rect.height * 2;
 }
 
-// === NEW: dynamic graph height ===
-  function adjustGraphHeight() {
-    const canvas = document.getElementById("elGraph");
-    const table = document.getElementById("zonesTable");
-    if (!canvas || !table) return;
+function adjustGraphHeight() {
+  const canvas = document.getElementById("elGraph");
+  const table = document.getElementById("zonesTable");
+  if (!canvas || !table) return;
 
-    const rowCount = table.querySelectorAll("tbody tr").length;
-    const baseHeight = 250;
-    const extraPerRow = 30;
-    const newHeight = baseHeight + rowCount * extraPerRow;
+  const rowCount = table.querySelectorAll("tbody tr").length;
+  const baseHeight = 200;        // base height for graph
+  const extraPerRow = 25;        // extra per blockage zone
+  const newHeight = baseHeight + rowCount * extraPerRow;
 
-    // CSS height
-    canvas.style.height = newHeight + "px";
+  // CSS height for display
+  canvas.style.height = newHeight + "px";
 
-    // Retina scale for sharp PDF
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * 2;
-    canvas.height = newHeight * 2;
-    
+  // Retina/high-res for PDF
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = newHeight * 2;
 }
 
 
 
+
 function drawElGraph(lat, lon) {
+adjustGraphHeight();    // ensures graph height grows with zones
   // adjustGraphHeight(); //
   const canvas = document.getElementById("elGraph");
 resizeCanvas(canvas);
@@ -641,10 +499,67 @@ function checkBlockingZones(rel) {
   const vesselImg=new Image();
   vesselImg.src="https://pgarciafer.github.io/satcalc/IMG_0585.PNG";
 
+
+const vesselCanvas = document.getElementById("vesselCanvas");
+const vesselCtx = vesselCanvas.getContext("2d");
+
+function drawVesselWithREL(rel) {
+  // Clear canvas
+  vesselCtx.clearRect(0, 0, vesselCanvas.width, vesselCanvas.height);
+
+  // Draw smaller vessel image (scale factor 0.6)
+  const scaleFactor = 0.75;
+  const scale = Math.min(vesselCanvas.width / vesselImg.width, vesselCanvas.height / vesselImg.height) * scaleFactor;
+  const imgW = vesselImg.width * scale;
+  const imgH = vesselImg.height * scale;
+  const imgX = (vesselCanvas.width - imgW) / 2;
+  const imgY = (vesselCanvas.height - imgH) / 2;
+  vesselCtx.drawImage(vesselImg, imgX, imgY, imgW, imgH);
+
+
+  // Center point
+  const centerX = vesselCanvas.width / 2;
+  const centerY = vesselCanvas.height / 2;
+
+  // REL line length = radius of imaginary circle around vessel
+  const radius = Math.min(imgW, imgH) / 2;
+
+  const angleRad = (rel - 90) * Math.PI / 180;
+  const endX = centerX + radius * Math.cos(angleRad);
+  const endY = centerY + radius * Math.sin(angleRad);
+
+  // Draw REL line
+  vesselCtx.beginPath();
+  vesselCtx.moveTo(centerX, centerY);
+  vesselCtx.lineTo(endX, endY);
+  vesselCtx.strokeStyle = "red";
+  vesselCtx.lineWidth = 3;
+  vesselCtx.stroke();
+  
+  
+  
+  
+  
+}
+
+
+
 function updateAll(){
   const {lat,lon,satLon,heading}=getLatLon();
   const {az,el}=calcAzEl(lat,lon,satLon);
   azVal.textContent='AZ='+formatNumber(az);
+
+
+	const rel = ((az - heading) + 360) % 360;
+	relVal.textContent = 'REL=' + formatNumber(rel);
+
+	// Draw vessel + REL marker
+	if(vesselImg.complete) {
+		drawVesselWithREL(rel);
+	} else {
+		vesselImg.onload = () => drawVesselWithREL(rel);
+	}
+
 
   // EL value handling
   if (el < MIN_ELEVATION) {
@@ -653,7 +568,7 @@ function updateAll(){
     elVal.textContent = 'EL=' + formatNumber(el);
   }
 
-  // Compute visible range of satellite longitudes (EL > 0)
+  // Compute visible range of satellite longitudes (EL > MIN_ELEVATION)
   const step = 0.5; // resolution in degrees
   let visibleLons = [];
   for (let lonSat = -180; lonSat <= 180; lonSat += step) {
@@ -663,20 +578,16 @@ function updateAll(){
 
   if (visibleLons.length > 0) {
     const minLonRaw = Math.min(...visibleLons);
-const maxLonRaw = Math.max(...visibleLons);
-const minLon = formatLonEW(minLonRaw);
-const maxLon = formatLonEW(maxLonRaw);
-document.getElementById("visibleRange").textContent =
-  `Visible range (EL > ${MIN_ELEVATION}) from ${minLon} to ${maxLon}`;
-
-  } else {
+	const maxLonRaw = Math.max(...visibleLons);
+	const minLon = formatLonEW(minLonRaw);
+	const maxLon = formatLonEW(maxLonRaw);
+	document.getElementById("visibleRange").textContent =
+		`Visible range (EL > ${MIN_ELEVATION}) from ${minLon} to ${maxLon}`;
+ } else {
     document.getElementById("visibleRange").textContent =
       `No satellites visible above horizon`;
   }
 
-  const rel=((az-heading)+360)%360;
-  relVal.textContent='REL='+formatNumber(rel);
-  drawRel(rel);
   copyBtn.disabled=false;
   pdfBtn.disabled=false;
   computeSatRangesAndRender();
@@ -756,16 +667,28 @@ copyBtn.addEventListener("click",()=>{
 pdfBtn.addEventListener("click", () => {
   const card = document.querySelector(".card");
 
-  // Hide buttons temporarily
+  // Hide buttons
   const ignoredEls = card.querySelectorAll("[data-html2canvas-ignore='true']");
   ignoredEls.forEach(el => el.style.visibility = "hidden");
 
-  // Trigger print dialog
-  window.print();
+  // Redraw EL graph at final size for PDF
+  const { lat, lon } = getLatLon();
+  drawElGraph(lat, lon);
 
-  // Restore buttons
-  ignoredEls.forEach(el => el.style.visibility = "");
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     'Satellite_Look_Angle.pdf',
+    image:        { type: 'png', quality: 1.0 },
+    html2canvas:  { scale: 2, useCORS: true, scrollY: -window.scrollY },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['avoid-all', 'css'] }
+  };
+
+  html2pdf().set(opt).from(card).save().finally(() => {
+    ignoredEls.forEach(el => el.style.visibility = "");
+  });
 });
+
 
 
 [latEl, lonEl, satLonEl].forEach(inp=>{
