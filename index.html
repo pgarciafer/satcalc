@@ -580,7 +580,7 @@ function checkBlockingZones(rel) {
     tr.innerHTML=`
       <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
       <td><input type="text" inputmode="decimal" value="${formatNumber(stop)}"></td>
-      <td><button class="small secondary" data-html2canvas-ignore="true">Remove</button></td>
+      <td><button class="small secondary" data-html2canvas-ignore="true">X</button></td>
     `;
     const startInput = tr.querySelector("td:nth-child(1) input");
     const stopInput  = tr.querySelector("td:nth-child(2) input");
