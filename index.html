@@ -66,25 +66,32 @@
   }
     }
     
-  #zonesTable td {
-  vertical-align: middle;   /* centers content vertically */
-  padding: 2px 4px;         /* a little breathing room */
+#zonesTable {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#zonesTable th,
+#zonesTable td {
+  text-align: center;
+  padding: 2px 4px;
+  vertical-align: middle; /* keeps everything centered */
+}
+
+#zonesTable tr {
+  height: 28px; /* fixed row height for consistency */
 }
 
 #zonesTable td input {
-  width: 100%;              /* stretch to fill the cell */
-  height: 24px;             /* consistent height */
-  line-height: 24px;
-  box-sizing: border-box;   /* padding included in width/height */
-  text-align: center;       /* center the number horizontally */
-  padding: 2px 4px;         /* control text spacing */
-  font-size: 12px;          /* keep numbers compact */
-  border: 1px solid #ccc;   /* match your other inputs */
+  width: 100%;
+  height: 24px;          /* input slightly smaller than row */
+  line-height: 24px;     /* centers the number vertically */
+  box-sizing: border-box;
+  text-align: center;    /* centers number horizontally */
+  font-size: 12px;
+  border: 1px solid #ccc;
   border-radius: 3px;
-}
-    
-  #zonesTable tr {
-  height: 28px;
+  padding: 0;            /* removes extra spacing */
 }
     #zonesTable td input:focus {
       background: #e0f2fe;
