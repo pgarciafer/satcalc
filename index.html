@@ -310,144 +310,202 @@
       canvas.width = rect.width * 2;
       canvas.height = newHeight * 2;
     }
-    function drawElGraph(lat, lon) {
-      const canvas = document.getElementById("elGraph");
-      resizeCanvas(canvas);
-      const ctx = canvas.getContext("2d");
-      const margin = 40;
-      const width = canvas.width - 2 * margin;
-      const height = canvas.height - 2 * margin;
-      const MIN_ELEVATION = 5;
-      function toX(lonSat) {
-        return margin + (lonSat + 180) * (width / 360);
-      }
-      function toY(el) {
-        const clampedEl = Math.max(0, el);
-        return canvas.height - margin - (clampedEl / 90) * height;
-      }
-      function normalizeLon(lon) {
-        return ((lon + 180) % 360 + 360) % 360 - 180;
-      }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      function shadeBand(elMin, elMax, color) {
-        const top = toY(elMax);
-        const bottom = toY(elMin);
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.2;
-        ctx.fillRect(toX(-180), top, toX(180) - toX(-180), bottom - top);
-        ctx.globalAlpha = 1.0;
-      }
-      shadeBand(0, MIN_ELEVATION, "red");
-      shadeBand(MIN_ELEVATION, 15, "yellow");
-      shadeBand(15, 65, "green");
-      shadeBand(65, 80, "yellow");
-      shadeBand(80, 90, "red");
-      const { heading } = getLatLon();
-      const rows = Array.from(zonesBody.querySelectorAll('tr'));
-      if (rows.length > 0) {
-        ctx.globalAlpha = 0.25;
-        const step = 0.5;
-        rows.forEach((row, idx) => {
-          const start = parseFloat(row.cells[0].querySelector("input").value);
-          const stop = parseFloat(row.cells[1].querySelector("input").value);
-          if (isNaN(start) || isNaN(stop)) return;
-          const ranges = computeSatRangesForZone(start, stop, lat, lon, heading, step);
-          ctx.fillStyle = zoneColors[idx % zoneColors.length];
-          ranges.forEach(([startLon, endLon]) => {
-            const xStart = toX(startLon);
-            const xEnd = toX(endLon);
-            const yTop = toY(90);
-            const yBottom = toY(0);
-            ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
-          });
-        });
-        ctx.globalAlpha = 1.0;
-      }
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(toX(-180), toY(0));
-      ctx.lineTo(toX(180), toY(0));
-      ctx.moveTo(toX(-180), toY(0));
-      ctx.lineTo(toX(-180), toY(90));
-      ctx.stroke();
-      ctx.fillStyle = "black";
-      ctx.font = "20px sans-serif";
-      ctx.textAlign = "center";
-      ctx.save();
-      ctx.translate(12, canvas.height / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.restore();
-      ctx.textAlign = "center";
-      for (let lon = -180; lon <= 180; lon += 60) {
-        const x = toX(lon);
-        ctx.beginPath();
-        ctx.moveTo(x, toY(0));
-        ctx.lineTo(x, toY(0) + 5);
-        ctx.stroke();
-        let label;
-        if (lon < 0) {
-          label = `${Math.abs(lon)}°W`;
-        } else if (lon > 0) {
-          label = `${lon}°E`;
-        } else {
-          label = `0°`;
-        }
-        ctx.fillText(label, x, toY(0) + 15);
-      }
-      ctx.textAlign = "right";
-      for (let el = 0; el <= 90; el += 15) {
-        const y = toY(el);
-        ctx.beginPath();
-        ctx.moveTo(toX(-180), y);
-        ctx.lineTo(toX(-180) - 5, y);
-        ctx.stroke();
-        ctx.fillText(el.toString(), toX(-180) - 8, y + 3);
-      }
-      const satLons = [];
-      const elevations = [];
-      const satLonStep = 1;
-      for (let lonSat = -180; lonSat <= 180; lonSat += satLonStep) {
-        const { el } = calcAzEl(lat, lon, lonSat);
-        satLons.push(lonSat);
-        elevations.push(el);
-      }
-      ctx.strokeStyle = "blue";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      satLons.forEach((lonSat, i) => {
-        const x = toX(lonSat);
-        const y = toY(elevations[i]);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+	
+function drawElGraph(lat, lon) {
+  const canvas = document.getElementById("elGraph");
+  resizeCanvas(canvas);
+  const ctx = canvas.getContext("2d");
+
+  const margin = 40;
+  const width = canvas.width - 2 * margin;
+  const height = canvas.height - 2 * margin;
+  const MIN_ELEVATION = 5;
+
+  // --- Compute visible longitude range --- // <<< changed
+  const step = 0.5;
+  let visibleLons = [];
+  for (let lonSat = -180; lonSat <= 180; lonSat += step) {
+    const { el: testEl } = calcAzEl(lat, lon, lonSat);
+    if (testEl > MIN_ELEVATION) visibleLons.push(lonSat);
+  }
+  let minVisible = -180, maxVisible = 180;
+  if (visibleLons.length > 0) {
+    minVisible = Math.min(...visibleLons) - 5;
+    maxVisible = Math.max(...visibleLons) + 5;
+    if (minVisible < -180) minVisible = -180;
+    if (maxVisible > 180) maxVisible = 180;
+  }
+
+  // --- Scaling functions now depend on [minVisible,maxVisible] --- // <<< changed
+  function toX(lonSat) {
+    return margin + (lonSat - minVisible) * (width / (maxVisible - minVisible));
+  }
+  function toY(el) {
+    const clampedEl = Math.max(0, el);
+    return canvas.height - margin - (clampedEl / 90) * height;
+  }
+  function normalizeLon(lon) {
+    return ((lon + 180) % 360 + 360) % 360 - 180;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // --- Background shading bands (use full visible range) --- // <<< changed
+  function shadeBand(elMin, elMax, color) {
+    const top = toY(elMax);
+    const bottom = toY(elMin);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(toX(minVisible), top, toX(maxVisible) - toX(minVisible), bottom - top);
+    ctx.globalAlpha = 1.0;
+  }
+  shadeBand(0, MIN_ELEVATION, "red");
+  shadeBand(MIN_ELEVATION, 15, "yellow");
+  shadeBand(15, 65, "green");
+  shadeBand(65, 80, "yellow");
+  shadeBand(80, 90, "red");
+
+  // --- Zone highlighting (uses new scaling) ---
+  const { heading } = getLatLon();
+  const rows = Array.from(zonesBody.querySelectorAll('tr'));
+  if (rows.length > 0) {
+    ctx.globalAlpha = 0.25;
+    const step = 0.5;
+    rows.forEach((row, idx) => {
+      const start = parseFloat(row.cells[0].querySelector("input").value);
+      const stop = parseFloat(row.cells[1].querySelector("input").value);
+      if (isNaN(start) || isNaN(stop)) return;
+      const ranges = computeSatRangesForZone(start, stop, lat, lon, heading, step);
+      ctx.fillStyle = zoneColors[idx % zoneColors.length];
+      ranges.forEach(([startLon, endLon]) => {
+        const xStart = toX(startLon);
+        const xEnd = toX(endLon);
+        const yTop = toY(90);
+        const yBottom = toY(0);
+        ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
       });
-      ctx.stroke();
-      ctx.strokeStyle = "red";
-      ctx.setLineDash([5, 3]);
-      ctx.beginPath();
-      ctx.moveTo(toX(-180), toY(MIN_ELEVATION));
-      ctx.lineTo(toX(180), toY(MIN_ELEVATION));
-      ctx.stroke();
-      ctx.setLineDash([]);
-      let { satLon } = getLatLon();
-      satLon = normalizeLon(satLon);
-      ctx.strokeStyle = "purple";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(toX(satLon), toY(0));
-      ctx.lineTo(toX(satLon), toY(90));
-      ctx.stroke();
-      ctx.fillStyle = "purple";
-      ctx.font = "22px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(formatLonEW(satLon), toX(satLon), canvas.height - margin + 28);
-      const { el: satEl } = calcAzEl(lat, lon, satLon);
-      ctx.fillStyle = "purple";
-      ctx.beginPath();
-      ctx.arc(toX(satLon), toY(satEl), 4, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.fillText(`${satEl.toFixed(1)}°`, toX(satLon), toY(satEl) - 8);
+    });
+    ctx.globalAlpha = 1.0;
+  }
+
+  // --- Axes ---
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(toX(minVisible), toY(0));
+  ctx.lineTo(toX(maxVisible), toY(0));
+  ctx.moveTo(toX(minVisible), toY(0));
+  ctx.lineTo(toX(minVisible), toY(90));
+  ctx.stroke();
+
+  ctx.fillStyle = "black";
+  ctx.font = "20px sans-serif";
+  ctx.textAlign = "center";
+
+  // Longitude ticks
+  const tickStep = 30; // <<< changed: adapt step for clarity
+  for (let lon = Math.ceil(minVisible / tickStep) * tickStep; lon <= maxVisible; lon += tickStep) {
+    const x = toX(lon);
+    ctx.beginPath();
+    ctx.moveTo(x, toY(0));
+    ctx.lineTo(x, toY(0) + 5);
+    ctx.stroke();
+    let label;
+    if (lon < 0) {
+      label = `${Math.abs(lon)}°W`;
+    } else if (lon > 0) {
+      label = `${lon}°E`;
+    } else {
+      label = `0°`;
     }
+    ctx.fillText(label, x, toY(0) + 15);
+  }
+
+// <<< Add explicit labels for minVisible / maxVisible
+  ctx.fillStyle = "black";
+  ctx.font = "18px sans-serif";
+  ctx.textAlign = "center";
+
+  // Left edge label
+  ctx.fillText(
+    formatLonEW(Math.round(minVisible)),
+    toX(minVisible),
+    toY(0) + 30
+  );
+
+  // Right edge label
+  ctx.fillText(
+    formatLonEW(Math.round(maxVisible)),
+    toX(maxVisible),
+    toY(0) + 30
+  );
+  // Elevation ticks
+  ctx.textAlign = "right";
+  for (let el = 0; el <= 90; el += 15) {
+    const y = toY(el);
+    ctx.beginPath();
+    ctx.moveTo(toX(minVisible), y);
+    ctx.lineTo(toX(minVisible) - 5, y);
+    ctx.stroke();
+    ctx.fillText(el.toString(), toX(minVisible) - 8, y + 3);
+  }
+
+  // --- Plot satellite elevation curve ---
+  const satLons = [];
+  const elevations = [];
+  const satLonStep = 1;
+  for (let lonSat = minVisible; lonSat <= maxVisible; lonSat += satLonStep) {
+    const { el } = calcAzEl(lat, lon, lonSat);
+    satLons.push(lonSat);
+    elevations.push(el);
+  }
+  ctx.strokeStyle = "blue";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  satLons.forEach((lonSat, i) => {
+    const x = toX(lonSat);
+    const y = toY(elevations[i]);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // --- Min elevation reference line ---
+  ctx.strokeStyle = "red";
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  ctx.moveTo(toX(minVisible), toY(MIN_ELEVATION));
+  ctx.lineTo(toX(maxVisible), toY(MIN_ELEVATION));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // --- Current satellite position ---
+  let { satLon } = getLatLon();
+  satLon = normalizeLon(satLon);
+  if (satLon >= minVisible && satLon <= maxVisible) { // <<< changed
+    ctx.strokeStyle = "purple";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(toX(satLon), toY(0));
+    ctx.lineTo(toX(satLon), toY(90));
+    ctx.stroke();
+
+    ctx.fillStyle = "purple";
+    ctx.font = "22px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(formatLonEW(satLon), toX(satLon), canvas.height - margin + 28);
+
+    const { el: satEl } = calcAzEl(lat, lon, satLon);
+    ctx.beginPath();
+    ctx.arc(toX(satLon), toY(satEl), 4, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillText(`${satEl.toFixed(1)}°`, toX(satLon), toY(satEl) - 8);
+  }
+}
+
+	
+	
+	
     function formatLonEW(lon) {
       if (lon > 0) return formatNumber(lon) + "°E";
       if (lon < 0) return formatNumber(Math.abs(lon)) + "°W";
