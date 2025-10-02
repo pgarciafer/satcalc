@@ -88,10 +88,37 @@
     .blocking-section { width: 100%; }
     .blocking-section label { font-weight: 600; margin-bottom: 4px; display: block; }
 
-    @media (max-width: 600px) {
+	.blocking-section .header-center {
+		display: flex;
+		flex-direction: column; /* Stacks the label and button vertically */
+		align-items: center; /* Centers items horizontally */
+		gap: 8px; /* Adds space between the label and button */
+	}
+
+/* You might want to remove the default label style if it conflicts */
+.blocking-section label {
+  font-weight: 600;
+  /* Removed: margin-bottom: 4px; display: block; */
+}
+
+    @media {
       .card { max-width: 100%; }
       .button-row { flex-direction: column; }
     }
+	
+
+@media print {
+  body, .card {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .main-column {
+    /* If you still want some spacing, add it here */
+    padding: 10mm;
+  }
+}
     
     
     .pdf-grid {
@@ -107,6 +134,15 @@
   border: 1px solid #ccc;
   padding: 8px;
 }
+
+
+	/* New styles for the two-column layout */
+    .two-column-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px; /* Adds space below the grid */
+    }
     
     
   </style>
@@ -116,48 +152,47 @@
     <h1>Satellite Look Angle Calculator</h1>
 
     <div class="main-column">
-      <!-- Coordinates -->
-      <div class="coords" aria-live="polite">
-        <div class="coord-item">
-          <label for="lat">Latitude</label>
-          <input id="lat" type="text" inputmode="decimal" value="38.88" />
-          <select id="latDir"><option value="N" selected>N</option><option value="S">S</option></select>
+      <div class="two-column-layout">
+        <div class="coords" aria-live="polite">
+          <div class="coord-item">
+            <label for="lat">Latitude</label>
+            <input id="lat" type="text" inputmode="decimal" value="38.88" />
+            <select id="latDir"><option value="N" selected>N</option><option value="S">S</option></select>
+          </div>
+          <div class="coord-item">
+            <label for="lon">Longitude</label>
+            <input id="lon" type="text" inputmode="decimal" value="1.40" />
+            <select id="lonDir"><option value="E" selected>E</option><option value="W">W</option></select>
+          </div>
+          <div class="coord-item">
+            <label for="satLon">Satellite Longitude</label>
+            <input id="satLon" type="text" inputmode="decimal" value="18.00" />
+            <select id="satLonDir"><option value="E">E</option><option value="W" selected>W</option></select>
+          </div>
+          <div class="coord-item">
+            <label for="heading">Heading</label>
+            <input id="heading" type="text" inputmode="decimal" value="0.00" />
+            <div style="width:48px;"></div>
+          </div>
         </div>
-        <div class="coord-item">
-          <label for="lon">Longitude</label>
-          <input id="lon" type="text" inputmode="decimal" value="1.40" />
-          <select id="lonDir"><option value="E" selected>E</option><option value="W">W</option></select>
-        </div>
-        <div class="coord-item">
-          <label for="satLon">Satellite Longitude</label>
-          <input id="satLon" type="text" inputmode="decimal" value="18.00" />
-          <select id="satLonDir"><option value="E">E</option><option value="W" selected>W</option></select>
-        </div>
-        <div class="coord-item">
-          <label for="heading">Heading</label>
-          <input id="heading" type="text" inputmode="decimal" value="0.00" />
-          <div style="width:48px;"></div>
-        </div>
-      </div>
 
-      <!-- Buttons on same row -->
+<div class="blocking-section" id="blockingZonesSection">
+  <div class="header-center">
+    <label>Blockage Zones</label>
+    <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
+  </div>
+  <table id="zonesTable" style="display:none;">
+    <thead><tr><th>AZ Start</th><th>AZ Stop</th><th></th></tr></thead>
+    <tbody id="zonesBody"></tbody>
+  </table>
+</div>
+
       <div class="button-row">
-        <button id="refreshBtn" class="small">Get Location</button>
-        <button id="copyBtn" class="small secondary" disabled>Copy</button>
-        <button id="pdfBtn" class="small secondary">PDF</button>
+        <button id="refreshBtn" class="small" data-html2canvas-ignore="true">Get Location</button>
+        <button id="copyBtn" class="small secondary" disabled data-html2canvas-ignore="true">Copy</button>
+        <button id="pdfBtn" class="small secondary" data-html2canvas-ignore="true">PDF</button>
       </div>
 
-      <!-- Blockage Zones -->
-      <div class="blocking-section" id="blockingZonesSection">
-        <label>Blockage Zones</label>
-        <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
-        <table id="zonesTable" style="display:none;">
-          <thead><tr><th>AZ Start</th><th>AZ Stop</th><th></th></tr></thead>
-          <tbody id="zonesBody"></tbody>
-        </table>
-      </div>
-
-      <!-- Diagram Info -->
       <div class="diagram-info">
         <div id="azVal">AZ=</div>
         <div id="elVal">EL=</div>
@@ -165,19 +200,20 @@
         <div id="visibleRange" style="font-weight:bold;"></div>
       </div>
 
-      <!-- Diagrams -->
-	  	  <div class="diagram">
-		<canvas id="vesselCanvas" width="300" height="300"></canvas>
-	  </div>
-	  
+      <div class="diagram">
+        <canvas id="vesselCanvas" width="300" height="300"></canvas>
+      </div>
+
       <div class="diagram">
         <canvas id="elGraph" width="300" height="150"></canvas>
       </div>
-	  
-
-
-
-      <div id="satRangesList"></div>
+	
+	 <!-- Stellite range list based on bloc zones -->
+	<div id="satRangesList"></div>
+	
+	
+		
+		
     </div>
   </div>
   
@@ -690,38 +726,22 @@ pdfBtn.addEventListener("click", () => {
   const { lat, lon } = getLatLon();
   drawElGraph(lat, lon); // redraw graphs at final resolution
 
-  // Build layout
-  const pdfLayout = document.getElementById("pdfLayout");
-  pdfLayout.innerHTML = `
-    <div class="pdf-grid">
-      <div class="pdf-cell" id="pdf-latlon"></div>
-      <div class="pdf-cell" id="pdf-blockzones"></div>
-      <div class="pdf-cell" id="pdf-az-el"></div>
-      <div class="pdf-cell" id="pdf-vessel"></div>
-      <div class="pdf-cell" id="pdf-elgraph"></div>
-      <div class="pdf-cell" id="pdf-satranges"></div>
-    </div>
-  `;
+  const cardElement = document.querySelector(".card"); // Target the main card element
+  if (!cardElement) {
+    console.error("Main card element not found.");
+    return;
+  }
 
-  // Clone or move content into cells
-  document.getElementById("pdf-latlon").appendChild(document.querySelector(".coords").cloneNode(true));
-  document.getElementById("pdf-blockzones").appendChild(document.getElementById("blockingZonesSection").cloneNode(true));
-  document.getElementById("pdf-az-el").appendChild(document.querySelector(".diagram-info").cloneNode(true));
-  document.getElementById("pdf-vessel").appendChild(document.getElementById("vesselCanvas").cloneNode(true));
-  document.getElementById("pdf-elgraph").appendChild(document.getElementById("elGraph").cloneNode(true));
-  document.getElementById("pdf-satranges").appendChild(document.getElementById("satRangesList").cloneNode(true));
-
-  // Export PDF
+  // Define the options for html2pdf
   const opt = {
-    margin:       [10, 10, 10, 10],
-    filename:     'Satellite_Look_Angle.pdf',
-    image:        { type: 'png', quality: 1.0 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['avoid-all', 'css'] }
+    margin: [10, 10, 10, 10],
+    filename: 'Satellite_Look_Angle.pdf',
+    image: { type: 'jpeg', quality: 0.98 }, // Use a higher quality setting
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().set(opt).from(pdfLayout).save();
+  html2pdf().set(opt).from(cardElement).save();
 });
 
 [latEl, lonEl, satLonEl].forEach(inp=>{
