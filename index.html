@@ -73,7 +73,18 @@
   #zonesTable td button:hover { background: #c0392b; }
   #zonesTable td input:focus { background: #e0f2fe; border-radius: 4px; }
 
-  #satRangesList { margin-top: 12px; font-size: 14px; line-height: 1.4; }
+  #satRangesList { 
+  margin-top: 6px; 
+  font-size: 14px; 
+  line-height: 1.4; 
+    display: grid;
+  grid-template-columns: 1fr; /* default single column */
+  gap: 6px 16px; /* spacing between rows/cols */
+  }
+  /* if more than one entry, switch to two columns */
+#satRangesList.two-col {
+  grid-template-columns: 1fr 1fr;
+}
 
   .zone-range { margin: 4px 0; }
   .zone-range .color { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
@@ -187,6 +198,9 @@
   #visibleRange {
   text-align: center;
 }
+
+
+
 </style>
 </head>
 <body>
@@ -248,6 +262,7 @@
           <div id="azVal">AZ=</div>
           <div id="elVal">EL=</div>
           <div id="relVal" style="font-weight:bold">REL=</div>
+		  <div id="relBlockMsg" style="font-weight:bold; margin-top:4px;"></div>
           <div id="visibleRange" style="font-weight:bold;"></div>
         </div>
         <div id="vessel-diagram-container" class="diagram">
@@ -605,34 +620,75 @@ function drawElGraph(lat, lon) {
     vesselImg.src = "https://pgarciafer.github.io/satcalc/IMG_0585.PNG";
     const vesselCanvas = document.getElementById("vesselCanvas");
     const vesselCtx = vesselCanvas.getContext("2d");
-    function drawVesselWithREL(rel) {
-      vesselCtx.clearRect(0, 0, vesselCanvas.width, vesselCanvas.height);
-      const scaleFactor = 0.75;
-      const scale = Math.min(vesselCanvas.width / vesselImg.width, vesselCanvas.height / vesselImg.height) * scaleFactor;
-      const imgW = vesselImg.width * scale;
-      const imgH = vesselImg.height * scale;
-      const imgX = (vesselCanvas.width - imgW) / 2;
-      const imgY = (vesselCanvas.height - imgH) / 2;
-      vesselCtx.drawImage(vesselImg, imgX, imgY, imgW, imgH);
-      const centerX = vesselCanvas.width / 2;
-      const centerY = vesselCanvas.height / 2;
-      const radius = Math.min(imgW, imgH) / 2;
-      const angleRad = (rel - 90) * Math.PI / 180;
-      const endX = centerX + radius * Math.cos(angleRad);
-      const endY = centerY + radius * Math.sin(angleRad);
-      vesselCtx.beginPath();
-      vesselCtx.moveTo(centerX, centerY);
-      vesselCtx.lineTo(endX, endY);
-      vesselCtx.strokeStyle = "red";
-      vesselCtx.lineWidth = 3;
-      vesselCtx.stroke();
-    }
+function drawVesselWithREL(rel) {
+  vesselCtx.clearRect(0, 0, vesselCanvas.width, vesselCanvas.height);
+
+  const scaleFactor = 0.75;
+  const scale = Math.min(vesselCanvas.width / vesselImg.width, vesselCanvas.height / vesselImg.height) * scaleFactor;
+  const imgW = vesselImg.width * scale;
+  const imgH = vesselImg.height * scale;
+  const imgX = (vesselCanvas.width - imgW) / 2;
+  const imgY = (vesselCanvas.height - imgH) / 2;
+
+  // Draw vessel image
+  vesselCtx.drawImage(vesselImg, imgX, imgY, imgW, imgH);
+
+  const centerX = vesselCanvas.width / 2;
+  const centerY = vesselCanvas.height / 2;
+  const radius = Math.min(imgW, imgH) / 2;
+
+  // --- Draw blockage shadows ---
+  const rows = Array.from(zonesBody.querySelectorAll('tr'));
+  rows.forEach((row, idx) => {
+    const start = parseFloat(row.cells[0].querySelector("input").value);
+    const stop = parseFloat(row.cells[1].querySelector("input").value);
+    if (isNaN(start) || isNaN(stop)) return;
+
+    const startRad = (start - 90) * Math.PI / 180; // rotate: 0° rel at top
+    const stopRad  = (stop - 90) * Math.PI / 180;
+
+    vesselCtx.beginPath();
+    vesselCtx.moveTo(centerX, centerY);
+    vesselCtx.arc(centerX, centerY, radius, startRad, stopRad, false);
+    vesselCtx.closePath();
+
+    vesselCtx.fillStyle = zoneColors[idx % zoneColors.length];
+    vesselCtx.fill();
+  });
+
+  // --- Draw REL direction line ---
+  const angleRad = (rel - 90) * Math.PI / 180;
+  const endX = centerX + radius * Math.cos(angleRad);
+  const endY = centerY + radius * Math.sin(angleRad);
+
+  vesselCtx.beginPath();
+  vesselCtx.moveTo(centerX, centerY);
+  vesselCtx.lineTo(endX, endY);
+  vesselCtx.strokeStyle = "red";
+  vesselCtx.lineWidth = 3;
+  vesselCtx.stroke();
+}
+
     function updateAll() {
       const { lat, lon, satLon, heading } = getLatLon();
       const { az, el } = calcAzEl(lat, lon, satLon);
       azVal.textContent = 'AZ=' + formatNumber(az);
       const rel = ((az - heading) + 360) % 360;
       relVal.textContent = 'REL=' + formatNumber(rel);
+	  // Check if REL is in any blockage zone
+const blockZones = checkBlockingZones(rel);
+const relBlockMsg = document.getElementById("relBlockMsg");
+
+if (blockZones) {
+  // Show first matching zone only (or modify to show multiple)
+  const zone = blockZones[0];
+  relBlockMsg.textContent = `Blockage area #${zone.index}`;
+  relBlockMsg.style.color = zoneColors[(zone.index - 1) % zoneColors.length];
+} else {
+  relBlockMsg.textContent = "";
+}
+
+	  
       if (vesselImg.complete) {
         drawVesselWithREL(rel);
       } else {
@@ -881,12 +937,29 @@ function drawElGraph(lat, lon) {
           parts.push(`${formatNumber(lo)}°E to ${formatNumber(hi)}°E`);
         });
         if (parts.length === 0) {
-          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx + 1} No visible Sat produces blockage here</div>`);
+          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx + 1} No blockage for visible Satellites</div>`);
         } else {
-          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx + 1} Blockage Zone range:  ${parts.join(', ')}</div>`);
+          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx + 1} Blockage range:  ${parts.join(', ')}</div>`);
         }
       });
-      satRangesList.innerHTML = outPieces.join('');
+	  
+	  
+	  
+	  
+	  if (outPieces.length === 0) {
+  satRangesList.innerHTML = "<i>(no Blockage Zones)</i>";
+  satRangesList.classList.remove("two-col");
+} else {
+  satRangesList.innerHTML = outPieces.join("");
+  if (outPieces.length > 1) {
+    satRangesList.classList.add("two-col");
+  } else {
+    satRangesList.classList.remove("two-col");
+  }
+}
+
+	  
+	  
     }
     function setupKeyboardNavigation() {
       const focusable = Array.from(document.querySelectorAll("input, select"));
