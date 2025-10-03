@@ -664,6 +664,7 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
       return { az, el };
     }
     const vesselImg = new Image();
+	vesselImg.crossOrigin = "anonymous";
     vesselImg.src = "https://pgarciafer.github.io/satcalc/IMG_0585.PNG";
     const vesselCanvas = document.getElementById("vesselCanvas");
     const vesselCtx = vesselCanvas.getContext("2d");
@@ -822,16 +823,39 @@ if (blockZones) {
 	
 	
 pdfBtn.addEventListener("click", () => {
+    // Ensure the graphs are up-to-date
+    updateAll();
+
     const cardElement = document.querySelector(".card");
     if (!cardElement) return;
 
-    // Clone the card so we can apply PDF styles without affecting live layout
+    // Clone the card
     const pdfClone = cardElement.cloneNode(true);
     pdfClone.classList.add("pdf-layout");
     pdfClone.style.width = "100%";
-    pdfClone.style.maxWidth = "600px"; // match desktop width
+    pdfClone.style.maxWidth = "600px";
 
-    // Use html2pdf on the cloned node
+    // Convert canvases to images (force EL graph and vesselCanvas)
+pdfClone.querySelectorAll("canvas").forEach(canvas => {
+    const originalCanvas = document.getElementById(canvas.id);
+    if (!originalCanvas) return;
+
+    const img = document.createElement("img");
+    img.src = originalCanvas.toDataURL("image/png");
+
+    if (canvas.id === "elGraph") {
+        // Make EL graph smaller in PDF
+        img.style.width = "500px";   // smaller width
+        img.style.height = "250px";  // smaller height
+    } else {
+        img.style.width = canvas.style.width || canvas.width + "px";
+        img.style.height = canvas.style.height || canvas.height + "px";
+    }
+
+    canvas.parentNode.replaceChild(img, canvas);
+});
+
+
     const opt = {
         margin: [10, 10, 10, 10],
         filename: 'Satellite_Look_Angle.pdf',
@@ -841,6 +865,8 @@ pdfBtn.addEventListener("click", () => {
     };
     html2pdf().set(opt).from(pdfClone).save();
 });
+
+
 
 	
 	
