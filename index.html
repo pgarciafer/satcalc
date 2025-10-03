@@ -200,6 +200,18 @@
   text-align: center;
 }
 
+/* PDF-only layout overrides */
+.pdf-layout .responsive-layout {
+    grid-template-columns: 1fr 1fr !important; /* Force two columns */
+}
+.pdf-layout .button-row {
+    flex-direction: row !important; /* Keep buttons horizontal */
+}
+.pdf-layout .centered-stacked-layout {
+    flex-direction: column !important; /* Optional, for diagrams */
+}
+
+
 
 
 </style>
@@ -794,23 +806,38 @@ if (blockZones) {
         setTimeout(() => copyBtn.textContent = "Copy", 1000);
       });
     });
-    pdfBtn.addEventListener("click", () => {
-      const { lat, lon } = getLatLon();
-      drawElGraph(lat, lon);
-      const cardElement = document.querySelector(".card");
-      if (!cardElement) {
-        console.error("Main card element not found.");
-        return;
-      }
-      const opt = {
+	
+	
+	
+pdfBtn.addEventListener("click", () => {
+    const cardElement = document.querySelector(".card");
+    if (!cardElement) return;
+
+    // Clone the card so we can apply PDF styles without affecting live layout
+    const pdfClone = cardElement.cloneNode(true);
+    pdfClone.classList.add("pdf-layout");
+    pdfClone.style.width = "100%";
+    pdfClone.style.maxWidth = "600px"; // match desktop width
+
+    // Use html2pdf on the cloned node
+    const opt = {
         margin: [10, 10, 10, 10],
         filename: 'Satellite_Look_Angle.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(cardElement).save();
-    });
+    };
+    html2pdf().set(opt).from(pdfClone).save();
+});
+
+	
+	
+	
+	
+	
+	
+	
+	
     [latEl, lonEl, satLonEl].forEach(inp => {
       inp.addEventListener("blur", () => {
         normalizeInput(inp, 180);
