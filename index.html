@@ -211,6 +211,15 @@
     flex-direction: column !important; /* Optional, for diagrams */
 }
 
+.narrow-table {
+    max-width: 270px; /* adjust width as needed */
+    margin: 0 auto;   /* center it in its column */
+}
+
+.narrow-table input {
+    width: 60px; /* shrink input fields */
+}
+
 
 
 
@@ -576,6 +585,9 @@ function checkBlockingZones(rel, el) {
 
 
 function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
+    if (zonesTable.classList.contains("narrow-table") === false) {
+        zonesTable.classList.add("narrow-table");
+    }
   const tr = document.createElement("tr");
   tr.innerHTML = `
     <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
