@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -248,6 +249,7 @@
               <tr>
                 <th>AZ Start</th>
                 <th>AZ Stop</th>
+				<th>EL Blockage</th>
                 <th></th>
               </tr>
             </thead>
@@ -380,28 +382,32 @@ function drawElGraph(lat, lon) {
   shadeBand(65, 80, "yellow");
   shadeBand(80, 90, "red");
 
-  // --- Zone highlighting (uses new scaling) ---
-  const { heading } = getLatLon();
-  const rows = Array.from(zonesBody.querySelectorAll('tr'));
-  if (rows.length > 0) {
-    ctx.globalAlpha = 0.25;
-    const step = 0.5;
-    rows.forEach((row, idx) => {
-      const start = parseFloat(row.cells[0].querySelector("input").value);
-      const stop = parseFloat(row.cells[1].querySelector("input").value);
-      if (isNaN(start) || isNaN(stop)) return;
-      const ranges = computeSatRangesForZone(start, stop, lat, lon, heading, step);
-      ctx.fillStyle = zoneColors[idx % zoneColors.length];
-      ranges.forEach(([startLon, endLon]) => {
-        const xStart = toX(startLon);
-        const xEnd = toX(endLon);
-        const yTop = toY(90);
-        const yBottom = toY(0);
-        ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
-      });
+// --- Zone highlighting (uses AZ start/stop + EL Blockage) ---
+const { heading } = getLatLon();
+// --- Zone highlighting: shaded EL blockage from 0 to EL block ---
+const rows = Array.from(zonesBody.querySelectorAll('tr'));
+if (rows.length > 0) {
+  ctx.globalAlpha = 0.25;
+  rows.forEach((row, idx) => {
+    const startAZ = parseFloat(row.cells[0].querySelector("input").value);
+    const stopAZ  = parseFloat(row.cells[1].querySelector("input").value);
+    const elBlock  = parseFloat(row.cells[2].querySelector("input").value);
+    if (isNaN(startAZ) || isNaN(stopAZ) || isNaN(elBlock)) return;
+
+    const ranges = computeSatRangesForZone(startAZ, stopAZ, lat, lon, heading, 0.5);
+    ctx.fillStyle = zoneColors[idx % zoneColors.length];
+
+    ranges.forEach(([startLon, endLon]) => {
+      const top = toY(elBlock);
+      const bottom = toY(0);
+      ctx.fillRect(toX(startLon), top, toX(endLon) - toX(startLon), bottom - top);
     });
-    ctx.globalAlpha = 1.0;
-  }
+  });
+  ctx.globalAlpha = 1.0;
+}
+
+
+
 
   // --- Axes ---
   ctx.strokeStyle = "black";
@@ -526,62 +532,79 @@ function drawElGraph(lat, lon) {
       if (lon < 0) return formatNumber(Math.abs(lon)) + "°W";
       return "0°";
     }
-    function checkBlockingZones(rel) {
-      const rows = zonesBody.querySelectorAll("tr");
-      const matches = [];
-      let zoneIndex = 0;
-      for (const row of rows) {
-        zoneIndex++;
-        const start = parseFloat(row.cells[0].querySelector("input").value);
-        const stop = parseFloat(row.cells[1].querySelector("input").value);
-        if (isNaN(start) || isNaN(stop)) continue;
-        let startAZ = (start + 360) % 360;
-        let stopAZ = (stop + 360) % 360;
-        if (startAZ <= stopAZ) {
-          if (rel >= startAZ && rel <= stopAZ) {
-            matches.push({ index: zoneIndex, start, stop });
-          }
-        } else {
-          if (rel >= startAZ || rel <= stopAZ) {
-            matches.push({ index: zoneIndex, start, stop });
-          }
-        }
+function checkBlockingZones(rel, el) {
+  const rows = zonesBody.querySelectorAll("tr");
+  const matches = [];
+  let zoneIndex = 0;
+
+  for (const row of rows) {
+    zoneIndex++;
+    const start = parseFloat(row.cells[0].querySelector("input").value);
+    const stop  = parseFloat(row.cells[1].querySelector("input").value);
+    const elBlock = parseFloat(row.cells[2].querySelector("input").value);
+
+    if (isNaN(start) || isNaN(stop) || isNaN(elBlock)) continue;
+
+    let startAZ = (start + 360) % 360;
+    let stopAZ = (stop + 360) % 360;
+    let inZone = false;
+
+    if (startAZ <= stopAZ) {
+      inZone = (rel >= startAZ && rel <= stopAZ);
+    } else {
+      inZone = (rel >= startAZ || rel <= stopAZ);
+    }
+
+    if (inZone && el < elBlock) {
+      matches.push({ index: zoneIndex, start, stop, elBlock });
+    }
+  }
+  return matches.length ? matches : null;
+}
+
+
+function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
+    <td><input type="text" inputmode="decimal" value="${formatNumber(stop)}"></td>
+    <td><input type="text" inputmode="decimal" value="${formatNumber(elBlock)}"></td>
+    <td><button class="small secondary" data-html2canvas-ignore="true">X</button></td>
+  `;
+
+  const inputs = tr.querySelectorAll("input");
+  inputs.forEach(inp => {
+    inp.addEventListener("input", updateAll);
+    inp.addEventListener("blur", () => {
+      let val = (inp.value || "").trim().replace(",", ".");
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      if (inp === inputs[2]) { // EL Blockage column
+        if (num < 0) num = 0;
+        if (num > 90) num = 90;
+      } else { // AZ columns
+        if (num < 0) num = 0;
+        if (num > 360) num = 360;
       }
-      return matches.length ? matches : null;
-    }
-    function createZoneRow(start = 0.00, stop = 0.00) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
-        <td><input type="text" inputmode="decimal" value="${formatNumber(stop)}"></td>
-        <td><button class="small secondary" data-html2canvas-ignore="true">X</button></td>
-      `;
-      const startInput = tr.querySelector("td:nth-child(1) input");
-      const stopInput = tr.querySelector("td:nth-child(2) input");
-      [startInput, stopInput].forEach(inp => {
-        inp.addEventListener("input", updateAll);
-        inp.addEventListener("blur", () => {
-          let val = (inp.value || "").trim().replace(",", ".");
-          let num = parseFloat(val);
-          if (isNaN(num)) num = 0;
-          if (num < 0) num = 0;
-          if (num > 360) num = 360;
-          inp.value = formatNumber(num);
-          updateAll();
-        });
-        inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
-      });
-      tr.querySelector("button").addEventListener("click", () => {
-        tr.remove();
-        if (zonesBody.children.length === 0) zonesTable.style.display = "none";
-        setupKeyboardNavigation();
-        updateAll();
-      });
-      zonesBody.appendChild(tr);
-      zonesTable.style.display = "table";
-      setupKeyboardNavigation();
+      inp.value = formatNumber(num);
       updateAll();
-    }
+    });
+    inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
+  });
+
+  tr.querySelector("button").addEventListener("click", () => {
+    tr.remove();
+    if (zonesBody.children.length === 0) zonesTable.style.display = "none";
+    setupKeyboardNavigation();
+    updateAll();
+  });
+
+  zonesBody.appendChild(tr);
+  zonesTable.style.display = "table";
+  setupKeyboardNavigation();
+  updateAll();
+}
+
     addBlockBtn.addEventListener("click", () => createZoneRow());
     function normalizeInput(input, max) {
       let val = (input.value || "").trim().replace(",", ".");
@@ -676,17 +699,17 @@ function drawVesselWithREL(rel) {
       const rel = ((az - heading) + 360) % 360;
       relVal.textContent = 'REL=' + formatNumber(rel);
 	  // Check if REL is in any blockage zone
-const blockZones = checkBlockingZones(rel);
+const blockZones = checkBlockingZones(rel, el);
 const relBlockMsg = document.getElementById("relBlockMsg");
 
 if (blockZones) {
-  // Show first matching zone only (or modify to show multiple)
   const zone = blockZones[0];
-  relBlockMsg.textContent = `Blockage area #${zone.index}`;
+  relBlockMsg.textContent = `Blockage area #${zone.index} (EL < ${zone.elBlock}°)`;
   relBlockMsg.style.color = zoneColors[(zone.index - 1) % zoneColors.length];
 } else {
   relBlockMsg.textContent = "";
 }
+
 
 	  
       if (vesselImg.complete) {
@@ -1008,7 +1031,7 @@ if (blockZones) {
       msg.textContent = "⚠️ Error: " + event.message + " (line " + event.lineno + ")";
     });
     window.addEventListener("resize", updateAll);
-  </script>
-  
+  </script>
+  
 </body>
 </html>
