@@ -1346,7 +1346,7 @@ pdfBtn.addEventListener("click", () => {
 
         const filteredSatellites = data.CONSTELLATION.SATELLITES.filter(satellite => {
             const satelliteIdString = String(satellite.satellite_id).toLowerCase();
-            return !satelliteIdString.startsWith('h3e');
+            return !satelliteIdString.startsWith();
         });
         
         filteredSatellites.forEach(satellite => {
