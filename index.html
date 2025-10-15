@@ -220,21 +220,39 @@
   
   /* Print layout (for PDF generation) */
   @media print {
+    /* Hides elements that shouldn't appear on the PDF */
+    .button-row,
+    .coord-item[style*="display:none"],
+    .sat-lists-container,
+    #file-input,
+    label[for="file-input"],
+    .legend {
+      display: none !important;
+    }
+
+    /* Ensures the body and cards don't have unnecessary margins, padding, or box shadows when printed */
     body, .card {
-      padding: 0 !important;
-      margin: 0 !important;
-      max-width: none !important;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+      background: none;
     }
-    .main-column {
-      padding: 10mm;
+
+    /* Makes the main container full width and removes horizontal layout to stack elements vertically */
+    .main-container {
       flex-direction: column;
-    }
-    .side-by-side-container {
       width: 100%;
+      padding: 10mm;
     }
-    #mapid {
-      width: 100%;
-      height: 400px;
+
+    /* Ensures the second card starts on a new page */
+    .card:last-child {
+      page-break-before: always;
+    }
+
+    /* A small margin to separate the headings from the content */
+    h1, h4 {
+      margin-top: 10mm;
     }
   }
   
@@ -356,38 +374,16 @@
     font-weight: bold;
 }
 
-@media print {
-  body, .card {
-    margin: 0;
-    box-shadow: none;
-    background: none;
-  }
-
-  /* Hide buttons and file input, etc. */
-  .button-row,
-  .coord-item[style*="display:none"],
-  .sat-lists-container,
-  #file-input,
-  label[for="file-input"] {
-    display: none !important;
-  }
-
-  /* Force the second card onto a new page */
-  .card:last-child {
-    page-break-before: always;
-  }
-  
-  /* Make sure the main content is laid out correctly */
-  .main-container {
-    flex-direction: column;
-    width: 100%;
-    padding: 10mm;
-  }
-
-  /* Resetting specific styles for print */
-  .responsive-layout {
-    grid-template-columns: 1fr;
-  }
+#zonesTable td:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#zonesTable td:first-child input {
+  flex-grow: 1;
+}
+#zonesTable td:first-child span {
+  margin-right: 5px; /* Adjust spacing between the dot and input */
 }
   </style>
 </head>
@@ -771,9 +767,10 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
     }
   const tr = document.createElement("tr");
   const rowIndex = zonesBody.children.length;
+  const color = zoneColors[rowIndex % zoneColors.length].replace("0.5", "1.0");
 
   tr.innerHTML = `
-    <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
+    <td><span style="color:${color};">&#9679;</span><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
     <td><input type="text" inputmode="decimal" value="${formatNumber(stop)}"></td>
     <td><input type="text" inputmode="decimal" value="${formatNumber(elBlock)}"></td>
     <td><button class="small secondary" data-html2canvas-ignore="true">X</button></td>
@@ -811,10 +808,6 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
   setupKeyboardNavigation();
   updateAll();
 }
-
-
-
-
     addBlockBtn.addEventListener("click", () => createZoneRow());
     function normalizeInput(input, max) {
       let val = (input.value || "").trim().replace(",", ".");
@@ -1005,10 +998,12 @@ if (blockZones) {
     });
 	
 	
+	
 pdfBtn.addEventListener("click", () => {
-    // This will trigger the browser's print dialog
     window.print();
 });
+
+
 	
     [latEl, lonEl, satLonEl].forEach(inp => {
       inp.addEventListener("blur", () => {
@@ -1092,8 +1087,6 @@ pdfBtn.addEventListener("click", () => {
       }
       return Math.round(best * 100) / 100;
     }
-	
-	
     function computeSatRangesAndRender() {
       const { lat, lon, heading } = getLatLon();
       const rows = Array.from(zonesBody.querySelectorAll('tr'));
@@ -1160,10 +1153,14 @@ pdfBtn.addEventListener("click", () => {
           }
           parts.push(`${formatNumber(lo)}°E to ${formatNumber(hi)}°E`);
         });
+        
+        // Corrected code: Added span element with color to the output
+        const zoneColor = zoneColors[idx % zoneColors.length].replace("0.25", "1.0");
+
         if (parts.length === 0) {
-          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx + 1} No blockage for visible Satellites</div>`);
+          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColor}"></span> Zone ${idx + 1} No blockage for visible Satellites</div>`);
         } else {
-          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColors[idx % zoneColors.length].replace("0.25","1.0")}"></span> Zone ${idx + 1} Blockage range:  ${parts.join(', ')}</div>`);
+          outPieces.push(`<div class="zone-range"><span class="color" style="background:${zoneColor}"></span> Zone ${idx + 1} Blockage range:  ${parts.join(', ')}</div>`);
         }
       });
 	  
@@ -1572,12 +1569,10 @@ ${carriersInfo}
                             if (!mymap.hasLayer(beamData.layer)) {
                                 mymap.addLayer(beamData.layer);
                             }
-                            
                         } else {
                             if (mymap.hasLayer(beamData.layer)) {
                                 mymap.removeLayer(beamData.layer);
                             }
-                            
                         }
                     };
                     item.appendChild(checkbox);
