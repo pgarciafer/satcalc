@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Satellite Look Angle Calculator</title>
 	<link rel="icon" href="https://raw.githubusercontent.com/pgarciafer/satcalc/main/logo1.png" type="image/png">
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  
   <style>
   :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; }
   body {
@@ -17,18 +19,23 @@
     padding: 20px;
     background: linear-gradient(180deg,#f8fafc,#eef2ff);
   }
+  .main-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 20px;
+  }
   .card {
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(2,6,23,0.08);
     padding: 20px;
     width: 100%;
-    max-width: 500px;
   }
   h1 { font-size: 18px; margin-bottom: 16px; color: #0f172a; text-align: center; }
 
 #vessel-diagram-container {
-  margin-bottom: -20px; /* Example: Pulls the element below it closer by 6px */
+  margin-bottom: -20px;
 }
   .coord-item {
     display: grid;
@@ -80,23 +87,19 @@
   font-size: 14px; 
   line-height: 1.4; 
     display: grid;
-  grid-template-columns: 1fr; /* default single column */
-  gap: 6px 16px; /* spacing between rows/cols */
+  grid-template-columns: 1fr;
+  gap: 6px 16px;
   }
-  /* if more than one entry, switch to two columns */
 #satRangesList.two-col {
   grid-template-columns: 1fr 1fr;
 }
-
-  .zone-range { margin: 4px 0; }
-  .zone-range .color { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
 
   canvas { 
   background: white; 
   border-radius: 8px; 
   width: 100%; 
-  max-width: 400px; /* Limits the max width of the diagram */
-    height: auto;   /* Set a fixed height */}
+  max-width: 400px;
+    height: auto; }
 
   .diagram { 
   display: flex; 
@@ -110,13 +113,18 @@
   margin-bottom: 6px; }
   .diagram-info div { margin-bottom: 4px; }
 
-  .main-column { display: flex; flex-direction: column; gap: 5px; }
+  .main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+  }
 
 .blocking-section {
   width: 100%;
   display: flex;
-  flex-direction: column; /* Stack children vertically */
-  align-items: center; /* Center children horizontally */
+  flex-direction: column;
+  align-items: center;
 }
   .blocking-section label { font-weight: 600; margin-bottom: 4px; display: block; }
 
@@ -134,7 +142,7 @@
   /* Responsive Layout (new) */
   .responsive-layout {
     display: grid;
-    grid-template-columns: 1fr; /* Default: mobile-first, single column */
+    grid-template-columns: 1fr;
     gap: 12px;
   }
   
@@ -161,27 +169,52 @@
   /* Media Queries */
   /* Desktop layout (for screens wider than 600px) */
   @media (min-width: 600px) {
-    .card {
-      max-width: 600px;
+    .main-container {
+      flex-direction: row;
+      min-height: 800px;
+    }
+    .card:first-child {
+      flex-basis: 600px;
+    }
+    .card:last-child {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
     }
     .responsive-layout {
-      grid-template-columns: 1fr 1fr; /* Three-column layout */
+      grid-template-columns: 1fr 1fr;
     }
-      .button-row {
+    .button-row {
     display: flex;
-	flex-direction: row; /* Changed to row to align items horizontally */
+	flex-direction: row;
     justify-content: center;
     gap: 6px;
     margin-bottom: 12px;
+  }
+  .main-column {
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+  }
+  .side-by-side-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  #mapid {
+    width: 100%;
+    height: 600px;
+    margin-top: 0;
   }
   }
   
     /* The new rule for the EL graph and sat range list section */
   .centered-stacked-layout {
     display: flex;
-    flex-direction: column; /* Stack the children vertically */
-    align-items: center; /* Center the children horizontally */
-    gap: 12px; /* Add some space between the two elements */
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     margin-top: 12px;
   }
   
@@ -194,6 +227,14 @@
     }
     .main-column {
       padding: 10mm;
+      flex-direction: column;
+    }
+    .side-by-side-container {
+      width: 100%;
+    }
+    #mapid {
+      width: 100%;
+      height: 400px;
     }
   }
   
@@ -203,111 +244,267 @@
 
 /* PDF-only layout overrides */
 .pdf-layout .responsive-layout {
-    grid-template-columns: 1fr 1fr !important; /* Force two columns */
+    grid-template-columns: 1fr 1fr !important;
 }
 .pdf-layout .button-row {
-    flex-direction: row !important; /* Keep buttons horizontal */
+    flex-direction: row !important;
 }
 .pdf-layout .centered-stacked-layout {
-    flex-direction: column !important; /* Optional, for diagrams */
+    flex-direction: column !important;
 }
 
 .narrow-table {
-    max-width: 270px; /* adjust width as needed */
-    margin: 0 auto;   /* center it in its column */
+    max-width: 270px;
+    margin: 0 auto;
 }
 
 .narrow-table input {
-    width: 60px; /* shrink input fields */
+    width: 60px;
+}
+#mapid {
+    height: 400px;
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+.legend {
+    line-height: 18px;
+    color: #555;
+    background-color: white;
+    padding: 6px 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+.legend h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+.legend-item {
+    cursor: pointer;
+}
+.legend-item.hidden {
+    opacity: 0.3;
+}
+.legend-button {
+    display: block;
+    width: 100%;
+    padding: 5px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    text-align: center;
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.remove-all-button {
+    margin-top: 10px;
+}
+  #beamDetails {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #f8f8f8;
+      font-family: monospace;
+      white-space: pre-wrap;
+  }
+  
+.sat-lists-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 20px;
+    text-align: center;
+  }
+.sat-list {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    height: 300px;
+    overflow-y: auto;
 }
 
+.sat-list h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
 
+.sat-list-item {
+    padding: 5px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+}
 
+.sat-list-item:hover {
+    background-color: #f8fafc;
+}
 
-</style>
+.sat-list-item.selected {
+    background-color: #e0f2fe;
+    font-weight: bold;
+}
+
+@media print {
+  body, .card {
+    margin: 0;
+    box-shadow: none;
+    background: none;
+  }
+
+  /* Hide buttons and file input, etc. */
+  .button-row,
+  .coord-item[style*="display:none"],
+  .sat-lists-container,
+  #file-input,
+  label[for="file-input"] {
+    display: none !important;
+  }
+
+  /* Force the second card onto a new page */
+  .card:last-child {
+    page-break-before: always;
+  }
+  
+  /* Make sure the main content is laid out correctly */
+  .main-container {
+    flex-direction: column;
+    width: 100%;
+    padding: 10mm;
+  }
+
+  /* Resetting specific styles for print */
+  .responsive-layout {
+    grid-template-columns: 1fr;
+  }
+}
+  </style>
 </head>
 <body>
+<div class="main-container">
   <div class="card" role="region" aria-label="Device coordinates">
     <h1>Satellite Look Angle Calculator</h1>
 
     <div class="main-column">
+        <div class="button-row">
+          <button id="refreshBtn" class="small" data-html2canvas-ignore="true">Get Location</button>
+          <button id="copyBtn" class="small secondary" disabled data-html2canvas-ignore="true">Copy</button>
+          <button id="pdfBtn" class="small secondary" data-html2canvas-ignore="true">PDF</button>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label for="file-input">Load Satellite Constellation File:</label>
+          <input type="file" id="file-input" accept=".json">
+        </div>
 
-      <div class="button-row">
-        <button id="refreshBtn" class="small" data-html2canvas-ignore="true">Get Location</button>
-        <button id="copyBtn" class="small secondary" disabled data-html2canvas-ignore="true">Copy</button>
-        <button id="pdfBtn" class="small secondary" data-html2canvas-ignore="true">PDF</button>
-      </div>
+        <div class="responsive-layout">
+          <div class="coords" aria-live="polite">
+            <div class="coord-item">
+              <label for="lat">Latitude</label>
+              <input id="lat" type="text" inputmode="decimal" value="38.88" />
+              <select id="latDir"><option value="N" selected>N</option><option value="S">S</option></select>
+            </div>
+            <div class="coord-item">
+              <label for="lon">Longitude</label>
+              <input id="lon" type="text" inputmode="decimal" value="1.40" />
+              <select id="lonDir"><option value="E" selected>E</option><option value="W">W</option></select>
+            </div>
+            <div class="coord-item">
+              <label for="satLon">Satellite Longitude</label>
+              <input id="satLon" type="text" inputmode="decimal" value="18.00" />
+              <select id="satLonDir"><option value="E">E</option><option value="W" selected>W</option></select>
+            </div>
+            <div class="coord-item">
+              <label for="heading">Heading</label>
+              <input id="heading" type="text" inputmode="decimal" value="0.00" />
+              <div style="width:48px;"></div>
+            </div>
+          </div>
 
-      <div class="responsive-layout">
-        <div class="coords" aria-live="polite">
-          <div class="coord-item">
-            <label for="lat">Latitude</label>
-            <input id="lat" type="text" inputmode="decimal" value="38.88" />
-            <select id="latDir"><option value="N" selected>N</option><option value="S">S</option></select>
+
+          <div id="blockingZonesSection">
+            <div class="header-center">
+              <label>Blockage Zones</label>
+            </div>
+            <table id="zonesTable" style="display:none;">
+              <thead>
+                <tr>
+                  <th>AZ Start</th>
+                  <th>AZ Stop</th>
+                  <th>EL Blockage</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="zonesBody"></tbody>
+            </table>
+            <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
           </div>
-          <div class="coord-item">
-            <label for="lon">Longitude</label>
-            <input id="lon" type="text" inputmode="decimal" value="1.40" />
-            <select id="lonDir"><option value="E" selected>E</option><option value="W">W</option></select>
-          </div>
-          <div class="coord-item">
-            <label for="satLon">Satellite Longitude</label>
-            <input id="satLon" type="text" inputmode="decimal" value="18.00" />
-            <select id="satLonDir"><option value="E">E</option><option value="W" selected>W</option></select>
-          </div>
-          <div class="coord-item">
-            <label for="heading">Heading</label>
-            <input id="heading" type="text" inputmode="decimal" value="0.00" />
+		            <div class="coord-item" style="display:none;">
+            <label for="satDropdown">Visible Satellites</label>
+            <select id="satDropdown"></select>
             <div style="width:48px;"></div>
           </div>
         </div>
 
-        <div class="blocking-section" id="blockingZonesSection">
-          <div class="header-center">
-            <label>Blockage Zones</label>
+        <div class="responsive-layout">
+          <div class="diagram-info">
+            <div id="azVal">AZ=</div>
+            <div id="elVal">EL=</div>
+            <div id="relVal" style="font-weight:bold">REL=</div>
+            <div id="relBlockMsg" style="font-weight:bold; margin-top:4px;"></div>
+            <div id="visibleRange" style="font-weight:bold;"></div>
           </div>
-          <table id="zonesTable" style="display:none;">
-            <thead>
-              <tr>
-                <th>AZ Start</th>
-                <th>AZ Stop</th>
-				<th>EL Blockage</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="zonesBody"></tbody>
-          </table>
-          <button type="button" id="addBlockBtn" data-html2canvas-ignore="true">Add Blockage Zone</button>
+          <div id="vessel-diagram-container" class="diagram">
+            <canvas id="vesselCanvas" width="300" height="300"></canvas>
+          </div>
         </div>
-      </div>
 
-      <div class="responsive-layout">
-        <div class="diagram-info">
-          <div id="azVal">AZ=</div>
-          <div id="elVal">EL=</div>
-          <div id="relVal" style="font-weight:bold">REL=</div>
-		  <div id="relBlockMsg" style="font-weight:bold; margin-top:4px;"></div>
-          <div id="visibleRange" style="font-weight:bold;"></div>
+        <div class="centered-stacked-layout">
+          <div class="diagram">
+            <canvas id="elGraph" width="300" height="150"></canvas>
+          </div>
+          <div id="satRangesList"></div>
         </div>
-        <div id="vessel-diagram-container" class="diagram">
-    <canvas id="vesselCanvas" width="300" height="300"></canvas>
-</div>
-      </div>
-
-    <div class="centered-stacked-layout">
-      <div class="diagram">
-        <canvas id="elGraph" width="300" height="150"></canvas>
-      </div>
-      <div id="satRangesList"></div>
-    </div>
+        
     </div>
   </div>
+
+  <div class="card" style="display:flex; flex-direction:column;">
+    <div id="mapid"></div>
+
+    <div class="sat-lists-container">
+        <div id="visibleSatellites" class="sat-list">
+            <h4>Visible and Unblocked Satellites</h4>
+        </div>
+        <div id="blockedSatellites" class="sat-list">
+            <h4>Blocked Satellites</h4>
+        </div>
+        <div id="satelliteDetails" class="sat-list">
+            <h4>Satellite Details</h4>
+            <div id="beamDetails"></div>
+        </div>
+    </div>
+  </div>
+</div>
     
   <div id="pdfLayout" style="display:none;"></div>
     
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <script>
     const latEl=document.getElementById('lat'), lonEl=document.getElementById('lon');
     const latDir=document.getElementById('latDir'), lonDir=document.getElementById('lonDir');
@@ -328,6 +525,10 @@
       "rgba(128, 0, 128, 0.5)",
       "rgba(255, 20, 147, 0.5)"
     ];
+    const beamDetailsEl = document.getElementById('beamDetails');
+    const visibleSatellitesList = document.getElementById('visibleSatellites');
+    const blockedSatellitesList = document.getElementById('blockedSatellites');
+    
     function formatNumber(num) {
       return (Math.round(num * 100) / 100).toString().replace(/\.00$/, "");
     }
@@ -360,7 +561,6 @@ function drawElGraph(lat, lon) {
   const height = canvas.height - 2 * margin;
   const MIN_ELEVATION = 5;
 
-  // --- Compute visible longitude range --- // <<< changed
   const step = 0.5;
   let visibleLons = [];
   for (let lonSat = -180; lonSat <= 180; lonSat += step) {
@@ -375,7 +575,6 @@ function drawElGraph(lat, lon) {
     if (maxVisible > 180) maxVisible = 180;
   }
 
-  // --- Scaling functions now depend on [minVisible,maxVisible] --- // <<< changed
   function toX(lonSat) {
     return margin + (lonSat - minVisible) * (width / (maxVisible - minVisible));
   }
@@ -389,7 +588,6 @@ function drawElGraph(lat, lon) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // --- Background shading bands (use full visible range) --- // <<< changed
   function shadeBand(elMin, elMax, color) {
     const top = toY(elMax);
     const bottom = toY(elMin);
@@ -404,9 +602,7 @@ function drawElGraph(lat, lon) {
   shadeBand(65, 80, "yellow");
   shadeBand(80, 90, "red");
 
-// --- Zone highlighting (uses AZ start/stop + EL Blockage) ---
 const { heading } = getLatLon();
-// --- Zone highlighting: shaded EL blockage from 0 to EL block ---
 const rows = Array.from(zonesBody.querySelectorAll('tr'));
 if (rows.length > 0) {
   ctx.globalAlpha = 0.25;
@@ -428,10 +624,6 @@ if (rows.length > 0) {
   ctx.globalAlpha = 1.0;
 }
 
-
-
-
-  // --- Axes ---
   ctx.strokeStyle = "black";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -445,8 +637,7 @@ if (rows.length > 0) {
   ctx.font = "20px sans-serif";
   ctx.textAlign = "center";
 
-  // Longitude ticks
-  const tickStep = 30; // <<< changed: adapt step for clarity
+  const tickStep = 30;
   for (let lon = Math.ceil(minVisible / tickStep) * tickStep; lon <= maxVisible; lon += tickStep) {
     const x = toX(lon);
     ctx.beginPath();
@@ -464,25 +655,21 @@ if (rows.length > 0) {
     ctx.fillText(label, x, toY(0) + 15);
   }
 
-// <<< Add explicit labels for minVisible / maxVisible
   ctx.fillStyle = "black";
   ctx.font = "18px sans-serif";
   ctx.textAlign = "center";
 
-  // Left edge label
   ctx.fillText(
     formatLonEW(Math.round(minVisible)),
     toX(minVisible),
     toY(0) + 30
   );
 
-  // Right edge label
   ctx.fillText(
     formatLonEW(Math.round(maxVisible)),
     toX(maxVisible),
     toY(0) + 30
   );
-  // Elevation ticks
   ctx.textAlign = "right";
   for (let el = 0; el <= 90; el += 15) {
     const y = toY(el);
@@ -493,7 +680,6 @@ if (rows.length > 0) {
     ctx.fillText(el.toString(), toX(minVisible) - 8, y + 3);
   }
 
-  // --- Plot satellite elevation curve ---
   const satLons = [];
   const elevations = [];
   const satLonStep = 1;
@@ -513,7 +699,6 @@ if (rows.length > 0) {
   });
   ctx.stroke();
 
-  // --- Min elevation reference line ---
   ctx.strokeStyle = "red";
   ctx.setLineDash([5, 3]);
   ctx.beginPath();
@@ -522,10 +707,9 @@ if (rows.length > 0) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // --- Current satellite position ---
   let { satLon } = getLatLon();
   satLon = normalizeLon(satLon);
-  if (satLon >= minVisible && satLon <= maxVisible) { // <<< changed
+  if (satLon >= minVisible && satLon <= maxVisible) {
     ctx.strokeStyle = "purple";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -546,9 +730,6 @@ if (rows.length > 0) {
   }
 }
 
-	
-	
-	
     function formatLonEW(lon) {
       if (lon > 0) return formatNumber(lon) + "°E";
       if (lon < 0) return formatNumber(Math.abs(lon)) + "°W";
@@ -563,7 +744,7 @@ function checkBlockingZones(rel, el) {
     zoneIndex++;
     const start = parseFloat(row.cells[0].querySelector("input").value);
     const stop  = parseFloat(row.cells[1].querySelector("input").value);
-    const elBlock = parseFloat(row.cells[2].querySelector("input").value);
+    const elBlock  = parseFloat(row.cells[2].querySelector("input").value);
 
     if (isNaN(start) || isNaN(stop) || isNaN(elBlock)) continue;
 
@@ -584,12 +765,13 @@ function checkBlockingZones(rel, el) {
   return matches.length ? matches : null;
 }
 
-
 function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
     if (zonesTable.classList.contains("narrow-table") === false) {
         zonesTable.classList.add("narrow-table");
     }
   const tr = document.createElement("tr");
+  const rowIndex = zonesBody.children.length;
+
   tr.innerHTML = `
     <td><input type="text" inputmode="decimal" value="${formatNumber(start)}"></td>
     <td><input type="text" inputmode="decimal" value="${formatNumber(stop)}"></td>
@@ -604,10 +786,10 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
       let val = (inp.value || "").trim().replace(",", ".");
       let num = parseFloat(val);
       if (isNaN(num)) num = 0;
-      if (inp === inputs[2]) { // EL Blockage column
+      if (inp === inputs[2]) {
         if (num < 0) num = 0;
         if (num > 90) num = 90;
-      } else { // AZ columns
+      } else {
         if (num < 0) num = 0;
         if (num > 360) num = 360;
       }
@@ -629,6 +811,9 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
   setupKeyboardNavigation();
   updateAll();
 }
+
+
+
 
     addBlockBtn.addEventListener("click", () => createZoneRow());
     function normalizeInput(input, max) {
@@ -679,21 +864,19 @@ function drawVesselWithREL(rel) {
   const imgX = (vesselCanvas.width - imgW) / 2;
   const imgY = (vesselCanvas.height - imgH) / 2;
 
-  // Draw vessel image
   vesselCtx.drawImage(vesselImg, imgX, imgY, imgW, imgH);
 
   const centerX = vesselCanvas.width / 2;
   const centerY = vesselCanvas.height / 2;
   const radius = Math.min(imgW, imgH) / 2;
 
-  // --- Draw blockage shadows ---
   const rows = Array.from(zonesBody.querySelectorAll('tr'));
   rows.forEach((row, idx) => {
     const start = parseFloat(row.cells[0].querySelector("input").value);
     const stop = parseFloat(row.cells[1].querySelector("input").value);
     if (isNaN(start) || isNaN(stop)) return;
 
-    const startRad = (start - 90) * Math.PI / 180; // rotate: 0° rel at top
+    const startRad = (start - 90) * Math.PI / 180;
     const stopRad  = (stop - 90) * Math.PI / 180;
 
     vesselCtx.beginPath();
@@ -705,7 +888,6 @@ function drawVesselWithREL(rel) {
     vesselCtx.fill();
   });
 
-  // --- Draw REL direction line ---
   const angleRad = (rel - 90) * Math.PI / 180;
   const endX = centerX + radius * Math.cos(angleRad);
   const endY = centerY + radius * Math.sin(angleRad);
@@ -724,7 +906,7 @@ function drawVesselWithREL(rel) {
       azVal.textContent = 'AZ=' + formatNumber(az);
       const rel = ((az - heading) + 360) % 360;
       relVal.textContent = 'REL=' + formatNumber(rel);
-	  // Check if REL is in any blockage zone
+	  
 const blockZones = checkBlockingZones(rel, el);
 const relBlockMsg = document.getElementById("relBlockMsg");
 
@@ -735,7 +917,6 @@ if (blockZones) {
 } else {
   relBlockMsg.textContent = "";
 }
-
 
 	  
       if (vesselImg.complete) {
@@ -769,6 +950,8 @@ if (blockZones) {
       pdfBtn.disabled = false;
       computeSatRangesAndRender();
       drawElGraph(lat, lon);
+      buildLegendAndMap();
+      updateSatelliteLists();
     }
     async function getAndShowLocation() {
       if (!('geolocation' in navigator)) {
@@ -822,60 +1005,10 @@ if (blockZones) {
     });
 	
 	
-	
 pdfBtn.addEventListener("click", () => {
-    // Ensure the graphs are up-to-date
-    updateAll();
-
-    const cardElement = document.querySelector(".card");
-    if (!cardElement) return;
-
-    // Clone the card
-    const pdfClone = cardElement.cloneNode(true);
-    pdfClone.classList.add("pdf-layout");
-    pdfClone.style.width = "100%";
-    pdfClone.style.maxWidth = "600px";
-
-    // Convert canvases to images (force EL graph and vesselCanvas)
-pdfClone.querySelectorAll("canvas").forEach(canvas => {
-    const originalCanvas = document.getElementById(canvas.id);
-    if (!originalCanvas) return;
-
-    const img = document.createElement("img");
-    img.src = originalCanvas.toDataURL("image/png");
-
-    if (canvas.id === "elGraph") {
-        // Make EL graph smaller in PDF
-        img.style.width = "500px";   // smaller width
-        img.style.height = "250px";  // smaller height
-    } else {
-        img.style.width = canvas.style.width || canvas.width + "px";
-        img.style.height = canvas.style.height || canvas.height + "px";
-    }
-
-    canvas.parentNode.replaceChild(img, canvas);
+    // This will trigger the browser's print dialog
+    window.print();
 });
-
-
-    const opt = {
-        margin: [10, 10, 10, 10],
-        filename: 'Satellite_Look_Angle.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    html2pdf().set(opt).from(pdfClone).save();
-});
-
-
-
-	
-	
-	
-	
-	
-	
-	
 	
     [latEl, lonEl, satLonEl].forEach(inp => {
       inp.addEventListener("blur", () => {
@@ -959,6 +1092,8 @@ pdfClone.querySelectorAll("canvas").forEach(canvas => {
       }
       return Math.round(best * 100) / 100;
     }
+	
+	
     function computeSatRangesAndRender() {
       const { lat, lon, heading } = getLatLon();
       const rows = Array.from(zonesBody.querySelectorAll('tr'));
@@ -1097,7 +1232,464 @@ pdfClone.querySelectorAll("canvas").forEach(canvas => {
       msg.textContent = "⚠️ Error: " + event.message + " (line " + event.lineno + ")";
     });
     window.addEventListener("resize", updateAll);
+
+    // --- Leaflet Map and Plotter Functionality ---
+    let mymap = L.map('mapid').setView([0, 0], 2);
+    let userMarker = null;
+    let legendControl;
+    let allBeamsData = {};
+    let layersMap = new Map();
+    const satDropdown = document.getElementById('satDropdown');
+    let colorMap = {};
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    }).addTo(mymap);
+
+    const fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', handleFileSelect, false);
+    
+    // Listen for changes on the new dropdown list
+    satDropdown.addEventListener('change', () => {
+        const selectedLon = satDropdown.value;
+        if (selectedLon) {
+            satLonEl.value = formatNumber(Math.abs(selectedLon));
+            satLonDir.value = parseFloat(selectedLon) < 0 ? 'W' : 'E';
+        }
+        updateAll();
+    });
+    
+    function generateColors(num) {
+        const colors = [];
+        for (let i = 0; i < num; i++) {
+            const hue = i * (360 / num);
+            colors.push(`hsl(${hue}, 70%, 50%)`);
+        }
+        return colors;
+    }
+
+    function formatLongitude(longitude) {
+        return `${Math.abs(longitude)}°${longitude >= 0 ? 'E' : 'W'}`;
+    }
+    
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const jsonContent = JSON.parse(e.target.result);
+          processConstellationData(jsonContent);
+        } catch (error) {
+          alert('Error parsing JSON file: ' + error.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+    
+    function processConstellationData(data) {
+        if (!data.CONSTELLATION || !data.CONSTELLATION.SATELLITES) {
+            alert('Invalid JSON structure.');
+            return;
+        }
+        
+        if (legendControl) {
+            mymap.removeControl(legendControl);
+        }
+
+        mymap.eachLayer(function (layer) {
+            if (layer.options.isContour) {
+                mymap.removeLayer(layer);
+            }
+        });
+
+        allBeamsData = {};
+        layersMap = new Map();
+
+        const filteredSatellites = data.CONSTELLATION.SATELLITES.filter(satellite => {
+            const satelliteIdString = String(satellite.satellite_id).toLowerCase();
+            return !satelliteIdString.startsWith('h3e');
+        });
+        
+        filteredSatellites.forEach(satellite => {
+            if (satellite.BEAM && satellite.CARRIER) {
+                satellite.BEAM.forEach(beam => {
+                    const carriers = satellite.CARRIER.filter(c => c.beam_id === beam.beam_id);
+                    if (carriers.length > 0) {
+                        const uniqueId = `${satellite.satellite_id}-${beam.beam_id}`;
+                        allBeamsData[uniqueId] = {
+                            satelliteId: satellite.satellite_id,
+                            longitude: satellite.longitude,
+                            formattedLongitude: formatLongitude(satellite.longitude),
+                            beamId: beam.beam_id,
+                            contours: beam.CONTOUR,
+                            carriers: carriers,
+                            layer: null,
+                            isChecked: false
+                        };
+                    }
+                });
+            }
+        });
+        
+        const sortedBeamIds = Object.keys(allBeamsData).sort((a, b) => {
+            return allBeamsData[a].longitude - allBeamsData[b].longitude;
+        });
+
+        const colors = generateColors(sortedBeamIds.length);
+        colorMap = {};
+        sortedBeamIds.forEach((id, index) => {
+            colorMap[id] = colors[index];
+        });
+
+        sortedBeamIds.forEach(id => {
+            const beamData = allBeamsData[id];
+            const beamColor = colorMap[id];
+            const layers = [];
+            
+            const popupContent = `
+                <b>Satellite ID:</b> ${beamData.satelliteId}<br>
+                <b>Longitude:</b> ${beamData.formattedLongitude}<br>
+                <b>Beam ID:</b> ${beamData.beamId}<br>
+                <b>Polarization:</b> ${[...new Set(beamData.carriers.map(c => c.polarization))].join(', ')}<br>
+                <hr>
+                <b>Carriers:</b><br>
+                ${beamData.carriers.map(carrier => {
+                    const centerFreqKHz = (parseFloat(carrier.center_freq) / 1000).toFixed(2);
+                    return `
+                        - RF Center Freq: ${centerFreqKHz} KHz<br>
+                        - Polarization: ${carrier.polarization}<br>
+                        - Symbol Rate: ${carrier.symbol_rate}<br>
+                    `;
+                }).join('')}
+            `;
+            
+            beamData.contours.forEach(contour => {
+                let layer;
+                if (contour.type === 1 && contour.points) {
+                    const latlngs = contour.points.map(point => [point[0], point[1]]);
+                    layer = L.polygon(latlngs, {color: beamColor, isContour: true}).bindPopup(popupContent);
+                } else if (contour.type === 0 && contour.center && contour.radius) {
+                    const centerLatlng = [contour.center[0], contour.center[1]];
+                    layer = L.circle(centerLatlng, {
+                        color: beamColor,
+                        fillColor: beamColor,
+                        fillOpacity: 0.5,
+                        radius: contour.radius * 1000,
+                        isContour: true
+                    }).bindPopup(popupContent);
+                }
+                if (layer) {
+                    layers.push(layer);
+                }
+            });
+            const layerGroup = L.layerGroup(layers);
+            allBeamsData[id].layer = layerGroup;
+        });
+
+        buildLegendAndMap();
+        updateSatelliteDropdown();
+    }
+    
+    function isPointInPolygon(point, polygon) {
+        let x = point.lat, y = point.lng;
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            let xi = polygon[i][0], yi = polygon[i][1];
+            let xj = polygon[j][0], yj = polygon[j][1];
+            let intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    function checkFootprintVisibility(beamData, userPoint) {
+        let isUserInFootprint = false;
+        beamData.contours.forEach(contour => {
+            if (contour.type === 1 && contour.points) {
+                if (isPointInPolygon(userPoint, contour.points)) {
+                    isUserInFootprint = true;
+                }
+            } else if (contour.type === 0 && contour.center && contour.radius) {
+                const center = { lat: contour.center[0], lng: contour.center[1] };
+                const distance = mymap.distance(L.latLng(userPoint.lat, userPoint.lng), L.latLng(center.lat, center.lng));
+                if (distance <= contour.radius * 1000) {
+                    isUserInFootprint = true;
+                }
+            }
+        });
+        return isUserInFootprint;
+    }
+    
+    function showBeamDetails(beamData) {
+        if (!beamData) {
+            beamDetailsEl.innerHTML = '';
+            return;
+        }
+        const carriersInfo = beamData.carriers.map(carrier => `
+- RF Center Freq: ${(parseFloat(carrier.center_freq) / 1000).toFixed(2)} KHz<br>
+- Polarization: ${carrier.polarization}<br>
+- Symbol Rate: ${carrier.symbol_rate}<br>
+`).join('');
+        
+        beamDetailsEl.innerHTML = `
+<b>Satellite Details:</b>
+-------------------<br>
+Satellite ID: ${beamData.satelliteId}<br>
+Longitude: ${beamData.formattedLongitude}<br>
+Beam ID: ${beamData.beamId}<br>
+${carriersInfo}
+`;
+    }
+
+    function updateSatelliteDropdown() {
+      const { lat, lon } = getLatLon();
+      const userPoint = { lat: lat, lng: lon };
+      
+      satDropdown.innerHTML = '<option value="">Select a visible satellite</option>';
+      
+      const visibleBeams = Object.values(allBeamsData).filter(beamData => 
+        checkFootprintVisibility(beamData, userPoint)
+      ).sort((a, b) => a.longitude - b.longitude);
+      
+      const uniqueVisibleSatellites = new Map();
+      visibleBeams.forEach(beamData => {
+        const satelliteKey = `${beamData.satelliteId}-${beamData.longitude}`;
+        if (!uniqueVisibleSatellites.has(satelliteKey)) {
+          const polarizations = [...new Set(visibleBeams.filter(b => b.satelliteId === beamData.satelliteId).flatMap(b => b.carriers.map(c => c.polarization)))].join(', ');
+          uniqueVisibleSatellites.set(satelliteKey, {
+            id: beamData.satelliteId,
+            longitude: beamData.longitude,
+            polarization: polarizations
+          });
+        }
+      });
+      
+      const sortedUniqueSatellites = Array.from(uniqueVisibleSatellites.values()).sort((a, b) => a.longitude - b.longitude);
+
+      sortedUniqueSatellites.forEach(sat => {
+        const option = document.createElement('option');
+        option.value = sat.longitude;
+        option.textContent = `${sat.id} (${formatLongitude(sat.longitude)}) - ${sat.polarization}`;
+        satDropdown.appendChild(option);
+      });
+    }
+
+    function buildLegendAndMap() {
+        if (legendControl) {
+            mymap.removeControl(legendControl);
+        }
+
+        const { lat, lon } = getLatLon();
+        const userPoint = { lat: lat, lng: lon };
+        
+        Object.keys(allBeamsData).forEach(id => {
+            if (mymap.hasLayer(allBeamsData[id].layer)) {
+                mymap.removeLayer(allBeamsData[id].layer);
+            }
+        });
+        
+        if (userMarker) {
+            userMarker.setLatLng([lat, lon]);
+        } else {
+            userMarker = L.marker([lat, lon]).addTo(mymap);
+        }
+
+        const uniqueBeamIds = Object.keys(allBeamsData).sort((a, b) => {
+            const lonA = allBeamsData[a].longitude;
+            const lonB = allBeamsData[b].longitude;
+            return lonA - lonB;
+        });
+
+        if (uniqueBeamIds.length === 0) {
+            mymap.setView([lat, lon], 5);
+            showBeamDetails(null);
+            return;
+        }
+
+        legendControl = L.control({position: 'bottomright'});
+        legendControl.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = '<h4>Select Beams</h4>';
+
+            const selectAllBtn = document.createElement('button');
+            selectAllBtn.className = 'legend-button';
+            selectAllBtn.textContent = 'Select All Visible';
+            selectAllBtn.onclick = () => {
+                uniqueBeamIds.forEach(id => {
+                    const beamData = allBeamsData[id];
+                    if (checkFootprintVisibility(beamData, userPoint)) {
+                        const checkbox = document.getElementById(`beam-checkbox-${id}`);
+                        if (checkbox && !checkbox.checked) {
+                            checkbox.checked = true;
+                            beamData.isChecked = true;
+                            if (!mymap.hasLayer(beamData.layer)) {
+                                mymap.addLayer(beamData.layer);
+                            }
+                        }
+                    }
+                });
+            };
+            div.appendChild(selectAllBtn);
+
+            const deselectAllBtn = document.createElement('button');
+            deselectAllBtn.className = 'legend-button';
+            deselectAllBtn.textContent = 'Deselect All';
+            deselectAllBtn.onclick = () => {
+                uniqueBeamIds.forEach(id => {
+                    const beamData = allBeamsData[id];
+                    const checkbox = document.getElementById(`beam-checkbox-${id}`);
+                    if (checkbox && checkbox.checked) {
+                        checkbox.checked = false;
+                        beamData.isChecked = false;
+                        if (mymap.hasLayer(beamData.layer)) {
+                            mymap.removeLayer(beamData.layer);
+                        }
+                    }
+                });
+                showBeamDetails(null);
+            };
+            div.appendChild(deselectAllBtn);
+            
+            uniqueBeamIds.forEach((id, index) => {
+                const beamData = allBeamsData[id];
+                const isVisible = checkFootprintVisibility(beamData, userPoint);
+
+                if (isVisible) {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `beam-checkbox-${id}`;
+                    checkbox.checked = beamData.isChecked;
+                    checkbox.onchange = (e) => {
+                        beamData.isChecked = e.target.checked;
+                        if (e.target.checked) {
+                            if (!mymap.hasLayer(beamData.layer)) {
+                                mymap.addLayer(beamData.layer);
+                            }
+                            
+                        } else {
+                            if (mymap.hasLayer(beamData.layer)) {
+                                mymap.removeLayer(beamData.layer);
+                            }
+                            
+                        }
+                    };
+                    item.appendChild(checkbox);
+
+                    const colorBox = document.createElement('i');
+                    colorBox.style.background = colorMap[id];
+                    item.appendChild(colorBox);
+
+                    const polarizations = [...new Set(beamData.carriers.map(c => c.polarization))].join(', ');
+                    const text = document.createElement('span');
+                    text.innerHTML = `<b>${allBeamsData[id].satelliteId}</b> (${allBeamsData[id].longitude}°${allBeamsData[id].longitude >= 0 ? 'E' : 'W'}) - Beam ${allBeamsData[id].beamId} (${polarizations})`;
+                    item.appendChild(text);
+
+                    div.appendChild(item);
+
+                    if (beamData.isChecked) {
+                        if (!mymap.hasLayer(beamData.layer)) {
+                            mymap.addLayer(beamData.layer);
+                        }
+                    }
+                }
+            });
+            L.DomEvent.disableScrollPropagation(div);
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        };
+        legendControl.addTo(mymap);
+        
+        mymap.setView([lat, lon], 5);
+    }
+    
+    function generateColors(num) {
+        const colors = [];
+        for (let i = 0; i < num; i++) {
+            const hue = i * (360 / num);
+            colors.push(`hsl(${hue}, 70%, 50%)`);
+        }
+        return colors;
+    }
+    
+    function updateSatelliteLists() {
+        const { lat, lon, heading, satLon } = getLatLon();
+        const userPoint = { lat: lat, lng: lon };
+        
+        visibleSatellitesList.innerHTML = '<h4>Visible and Unblocked Satellites</h4>';
+        blockedSatellitesList.innerHTML = '<h4>Blocked Satellites</h4>';
+        
+        const visibleBeams = Object.values(allBeamsData).filter(beamData =>
+            checkFootprintVisibility(beamData, userPoint)
+        ).sort((a, b) => a.longitude - b.longitude);
+
+        visibleBeams.forEach(beamData => {
+            const { az, el } = calcAzEl(lat, lon, beamData.longitude);
+            const rel = ((az - heading) + 360) % 360;
+            const blockZones = checkBlockingZones(rel, el);
+            
+            const li = document.createElement('div');
+            li.className = 'sat-list-item';
+            
+            // Add the blockage zone information to the blocked satellites list item
+            if (blockZones) {
+                const zoneInfo = blockZones.map(zone => {
+                    const color = zoneColors[zone.index - 1].replace("0.5", "1.0");
+                    return `<span style="color:${color};">&#9679;</span> Zone #${zone.index}`;
+                }).join(', ');
+                li.innerHTML = `${beamData.satelliteId} (${formatLongitude(beamData.longitude)}) - Beam ${beamData.beamId} (${zoneInfo})`;
+            } else {
+                li.innerHTML = `${beamData.satelliteId} (${formatLongitude(beamData.longitude)}) - Beam ${beamData.beamId}`;
+            }
+
+            li.onclick = () => {
+                satLonEl.value = formatNumber(Math.abs(beamData.longitude));
+                satLonDir.value = beamData.longitude < 0 ? 'W' : 'E';
+                updateAll();
+                highlightListItem(li, 'visibleSatellites');
+                highlightListItem(li, 'blockedSatellites');
+				showBeamDetails(beamData);
+            };
+
+            if (beamData.longitude === satLon) {
+                li.classList.add('selected');
+            }
+
+            if (blockZones) {
+                blockedSatellitesList.appendChild(li);
+            } else {
+                visibleSatellitesList.appendChild(li);
+            }
+        });
+        
+        if (visibleSatellitesList.children.length <= 1) {
+          const noSatellitesMessage = document.createElement('p');
+          noSatellitesMessage.textContent = 'No unblocked satellites found.';
+          visibleSatellitesList.appendChild(noSatellitesMessage);
+        }
+        if (blockedSatellitesList.children.length <= 1) {
+          const noSatellitesMessage = document.createElement('p');
+          noSatellitesMessage.textContent = 'No blocked satellites found.';
+          blockedSatellitesList.appendChild(noSatellitesMessage);
+        }
+    }
+    
+    function highlightListItem(item, listId) {
+        const list = document.getElementById(listId);
+        if (list) {
+            Array.from(list.children).forEach(child => {
+                child.classList.remove('selected');
+            });
+            item.classList.add('selected');
+        }
+    }
+
   </script>
-  
 </body>
 </html>
