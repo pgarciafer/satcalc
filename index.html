@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Satellite Look Angle Calculator</title>
-	<link rel="icon" href="https://raw.githubusercontent.com/pgarciafer/satcalc/main/logo1.png" type="image/png">
+  <link rel="icon" href="https://raw.githubusercontent.com/pgarciafer/satcalc/main/logo1.png" type="image/png">
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   
@@ -223,10 +223,8 @@
     /* Hides elements that shouldn't appear on the PDF */
     .button-row,
     .coord-item[style*="display:none"],
-    .sat-lists-container,
     #file-input,
-    label[for="file-input"],
-    .legend {
+    label[for="file-input"] {
       display: none !important;
     }
 
@@ -236,6 +234,28 @@
       padding: 0;
       box-shadow: none;
       background: none;
+    }
+    
+    /* NEW: Show legend and sat lists in print and remove scrolling/fixed height */
+    .legend,
+    .sat-lists-container,
+    .sat-list {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        max-height: none !important;
+    }
+    
+    .sat-list h4 {
+        font-size: 16px;
+    }
+    
+    .sat-list-item {
+        font-size: 12px;
+    }
+    
+    #beamDetails {
+        font-size: 10px;
     }
 
     /* Makes the main container full width and removes horizontal layout to stack elements vertically */
@@ -1451,8 +1471,6 @@ pdfBtn.addEventListener("click", () => {
 `).join('');
         
         beamDetailsEl.innerHTML = `
-<b>Satellite Details:</b>
--------------------<br>
 Satellite ID: ${beamData.satelliteId}<br>
 Longitude: ${beamData.formattedLongitude}<br>
 Beam ID: ${beamData.beamId}<br>
