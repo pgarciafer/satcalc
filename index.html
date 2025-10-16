@@ -479,6 +479,30 @@
             <div id="elVal">EL=</div>
             <div id="relVal" style="font-weight:bold">REL=</div>
             <div id="relBlockMsg" style="font-weight:bold; margin-top:4px;"></div>
+            <table id="trimTable" class="narrow-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>RX Green</th>
+                        <th>Current Trim</th>
+                        <th>New Trim</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>AZ Trim</td>
+                        <td><input type="text" id="azGreen" inputmode="decimal" readonly></td>
+                        <td><input type="text" id="azCurrent" inputmode="decimal" value="0"></td>
+                        <td><input type="text" id="azNew" readonly></td>
+                    </tr>
+                    <tr>
+                        <td>EL Trim</td>
+                        <td><input type="text" id="elGreen" inputmode="decimal" readonly></td>
+                        <td><input type="text" id="elCurrent" inputmode="decimal" value="0"></td>
+                        <td><input type="text" id="elNew" readonly></td>
+                    </tr>
+                </tbody>
+            </table>
             <div id="visibleRange" style="font-weight:bold;"></div>
           </div>
           <div id="vessel-diagram-container" class="diagram">
@@ -544,6 +568,14 @@
     const beamDetailsEl = document.getElementById('beamDetails');
     const visibleSatellitesList = document.getElementById('visibleSatellites');
     const blockedSatellitesList = document.getElementById('blockedSatellites');
+    
+    // New Trim table elements
+    const azGreenEl = document.getElementById('azGreen');
+    const azCurrentEl = document.getElementById('azCurrent');
+    const azNewEl = document.getElementById('azNew');
+    const elGreenEl = document.getElementById('elGreen');
+    const elCurrentEl = document.getElementById('elCurrent');
+    const elNewEl = document.getElementById('elNew');
     
     function formatNumber(num) {
       return (Math.round(num * 100) / 100).toString().replace(/\.00$/, "");
@@ -830,14 +862,22 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
 }
     addBlockBtn.addEventListener("click", () => createZoneRow());
     function normalizeInput(input, max) {
-      let val = (input.value || "").trim().replace(",", ".");
-      if (val === "") return;
-      let num = parseFloat(val);
-      if (isNaN(num)) return;
-      if (num > max) num = max;
-      if (num < 0) num = 0;
-      input.value = formatNumber(num);
+        let val = (input.value || "").trim().replace(",", ".");
+        if (val === "") return;
+        let num = parseFloat(val);
+        if (isNaN(num)) return;
+
+        if (input.id === "azCurrent" || input.id === "elCurrent" || input.id === "azGreen" || input.id === "elGreen") {
+            // No min/max for trim values, only format
+            input.value = formatNumber(num);
+        } else {
+            // Apply min/max for other inputs
+            if (num > max) num = max;
+            if (num < 0) num = 0;
+            input.value = formatNumber(num);
+        }
     }
+
     function getLatLon() {
       const latVal = parseFloat((latEl.value || "").trim().replace(",", ".")) || 0;
       const lonVal = parseFloat((lonEl.value || "").trim().replace(",", ".")) || 0;
@@ -913,10 +953,28 @@ function drawVesselWithREL(rel) {
   vesselCtx.stroke();
 }
 
+    function calculateTrim(az, el) {
+        const azGreen = parseFloat(azGreenEl.value) || 0;
+        const azCurrent = parseInt(azCurrentEl.value) || 0;
+        const elGreen = parseFloat(elGreenEl.value) || 0;
+        const elCurrent = parseInt(elCurrentEl.value) || 0;
+
+        const azNew = Math.round(((az - azGreen) * 10) + azCurrent);
+        const elNew = Math.round(((el - elGreen) * 10) + elCurrent);
+
+        azNewEl.value = azNew;
+        elNewEl.value = elNew;
+    }
+
     function updateAll() {
       const { lat, lon, satLon, heading } = getLatLon();
       const { az, el } = calcAzEl(lat, lon, satLon);
+
+      azGreenEl.value = formatNumber(az);
+      elGreenEl.value = formatNumber(el);
+      
       azVal.textContent = 'AZ=' + formatNumber(az);
+      elVal.textContent = 'EL=' + formatNumber(el);
       const rel = ((az - heading) + 360) % 360;
       relVal.textContent = 'REL=' + formatNumber(rel);
 	  
@@ -930,7 +988,6 @@ if (blockZones) {
 } else {
   relBlockMsg.textContent = "";
 }
-
 	  
       if (vesselImg.complete) {
         drawVesselWithREL(rel);
@@ -965,6 +1022,7 @@ if (blockZones) {
       drawElGraph(lat, lon);
       buildLegendAndMap();
       updateSatelliteLists();
+      calculateTrim(az, el);
     }
     async function getAndShowLocation() {
       if (!('geolocation' in navigator)) {
@@ -1040,6 +1098,17 @@ pdfBtn.addEventListener("click", () => {
     headingEl.addEventListener("input", updateAll);
     headingEl.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
     [latDir, lonDir, satLonDir].forEach(sel => sel.addEventListener("change", updateAll));
+    
+    // Listeners for the new trim table inputs
+    [azGreenEl, azCurrentEl, elGreenEl, elCurrentEl].forEach(inp => {
+        inp.addEventListener("input", updateAll);
+        inp.addEventListener("blur", () => {
+            normalizeInput(inp, 360); // Assuming a max value of 360 for AZ, 90 for EL
+            updateAll();
+        });
+        inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
+    });
+
     function computeSatRangesForZone(startAZ, stopAZ, lat, lon, heading, step = 1) {
       const start = (startAZ + 360) % 360;
       const stop = (stopAZ + 360) % 360;
