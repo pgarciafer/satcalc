@@ -867,8 +867,11 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
         let num = parseFloat(val);
         if (isNaN(num)) return;
 
-        if (input.id === "azCurrent" || input.id === "elCurrent" || input.id === "azGreen" || input.id === "elGreen") {
-            // No min/max for trim values, only format
+        if (input.id === "azCurrent" || input.id === "elCurrent") {
+            // No min/max for current trim values, only format as integer
+            input.value = Math.round(num);
+        } else if (input.id === "azGreen" || input.id === "elGreen") {
+            // No min/max for RX Green values, only format
             input.value = formatNumber(num);
         } else {
             // Apply min/max for other inputs
@@ -969,9 +972,6 @@ function drawVesselWithREL(rel) {
     function updateAll() {
       const { lat, lon, satLon, heading } = getLatLon();
       const { az, el } = calcAzEl(lat, lon, satLon);
-
-      azGreenEl.value = formatNumber(az);
-      elGreenEl.value = formatNumber(el);
       
       azVal.textContent = 'AZ=' + formatNumber(az);
       elVal.textContent = 'EL=' + formatNumber(el);
@@ -1103,7 +1103,7 @@ pdfBtn.addEventListener("click", () => {
     [azGreenEl, azCurrentEl, elGreenEl, elCurrentEl].forEach(inp => {
         inp.addEventListener("input", updateAll);
         inp.addEventListener("blur", () => {
-            normalizeInput(inp, 360); // Assuming a max value of 360 for AZ, 90 for EL
+            normalizeInput(inp, 360); // Max value is not relevant for trim, but kept for consistency
             updateAll();
         });
         inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
@@ -1301,6 +1301,11 @@ pdfBtn.addEventListener("click", () => {
     window.addEventListener('DOMContentLoaded', () => {
       setupKeyboardNavigation();
       updateAll();
+
+      // Set initial values for RX Green fields after initial calculation
+      const { az, el } = calcAzEl(getLatLon().lat, getLatLon().lon, getLatLon().satLon);
+      azGreenEl.value = formatNumber(az);
+      elGreenEl.value = formatNumber(el);
     });
     window.addEventListener("error", function(event) {
       let msg = document.getElementById("errorBox");
