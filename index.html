@@ -1428,6 +1428,7 @@ pdfBtn.addEventListener("click", () => {
                 satellite.BEAM.forEach(beam => {
                     const carriers = satellite.CARRIER.filter(c => c.beam_id === beam.beam_id);
                     if (carriers.length > 0) {
+                        // Unique ID is sat-id-beam-id
                         const uniqueId = `${satellite.satellite_id}-${beam.beam_id}`;
                         allBeamsData[uniqueId] = {
                             satelliteId: satellite.satellite_id,
@@ -1566,6 +1567,8 @@ ${carriersInfo}
       visibleBeams.forEach(beamData => {
         const satelliteKey = `${beamData.satelliteId}-${beamData.longitude}`;
         if (!uniqueVisibleSatellites.has(satelliteKey)) {
+          // Note: This still calculates polarizations per-satellite for the dropdown, 
+          // which is useful for selecting a satellite (not a beam).
           const polarizations = [...new Set(visibleBeams.filter(b => b.satelliteId === beamData.satelliteId).flatMap(b => b.carriers.map(c => c.polarization)))].join(', ');
           uniqueVisibleSatellites.set(satelliteKey, {
             id: beamData.satelliteId,
@@ -1693,7 +1696,8 @@ ${carriersInfo}
 
                     const polarizations = [...new Set(beamData.carriers.map(c => c.polarization))].join(', ');
                     const text = document.createElement('span');
-                    text.innerHTML = `<b>${allBeamsData[id].satelliteId}</b> (${allBeamsData[id].longitude}°${allBeamsData[id].longitude >= 0 ? 'E' : 'W'}) - Beam ${allBeamsData[id].beamId} (${polarizations})`;
+                    // MODIFIED: Use formatLongitude to correctly display West longitudes without the minus sign.
+                    text.innerHTML = `<b>${allBeamsData[id].satelliteId}</b> (${formatLongitude(allBeamsData[id].longitude)}) - Beam ${allBeamsData[id].beamId} (${polarizations})`;
                     item.appendChild(text);
 
                     div.appendChild(item);
@@ -1723,6 +1727,13 @@ ${carriersInfo}
         return colors;
     }
     
+    // New/Modified helper function to get polarizations specific to a single beam
+    function getBeamPolarizations(beamData) {
+        // Find unique polarizations only from the carriers of this specific beam
+        const polarizations = [...new Set(beamData.carriers.map(c => c.polarization))].join(', ');
+        return polarizations;
+    }
+    
     function updateSatelliteLists() {
         const { lat, lon, heading, satLon } = getLatLon();
         const userPoint = { lat: lat, lng: lon };
@@ -1730,10 +1741,12 @@ ${carriersInfo}
         visibleSatellitesList.innerHTML = '<h4>Visible and Unblocked Satellites</h4>';
         blockedSatellitesList.innerHTML = '<h4>Blocked Satellites</h4>';
         
+        // Filter and sort all beams visible in the footprint
         const visibleBeams = Object.values(allBeamsData).filter(beamData =>
             checkFootprintVisibility(beamData, userPoint)
         ).sort((a, b) => a.longitude - b.longitude);
 
+        // Iterate directly over each visible beam
         visibleBeams.forEach(beamData => {
             const { az, el } = calcAzEl(lat, lon, beamData.longitude);
             const rel = ((az - heading) + 360) % 360;
@@ -1742,28 +1755,47 @@ ${carriersInfo}
             const li = document.createElement('div');
             li.className = 'sat-list-item';
             
-            // Add the blockage zone information to the blocked satellites list item
+            // Get polarization for the current beam
+            const polarizations = getBeamPolarizations(beamData);
+            
+            // Text includes Satellite ID, Longitude, Beam ID, and Beam Polarizations
+            const beamText = `${beamData.satelliteId} (${formatLongitude(beamData.longitude)}) - Beam ${beamData.beamId} (${polarizations})`;
+            
+            // Add the blockage zone information if blocked
             if (blockZones) {
                 const zoneInfo = blockZones.map(zone => {
                     const color = zoneColors[zone.index - 1].replace("0.5", "1.0");
                     return `<span style="color:${color};">&#9679;</span> Zone #${zone.index}`;
                 }).join(', ');
-                li.innerHTML = `${beamData.satelliteId} (${formatLongitude(beamData.longitude)}) - Beam ${beamData.beamId} (${zoneInfo})`;
+                li.innerHTML = `${beamText} (${zoneInfo})`;
             } else {
-                li.innerHTML = `${beamData.satelliteId} (${formatLongitude(beamData.longitude)}) - Beam ${beamData.beamId}`;
+                li.innerHTML = beamText;
             }
 
+            // Set up click handler
             li.onclick = () => {
                 satLonEl.value = formatNumber(Math.abs(beamData.longitude));
                 satLonDir.value = beamData.longitude < 0 ? 'W' : 'E';
                 updateAll();
                 highlightListItem(li, 'visibleSatellites');
                 highlightListItem(li, 'blockedSatellites');
-				showBeamDetails(beamData);
+                showBeamDetails(beamData); // Show details for the specific beam
             };
 
-            if (beamData.longitude === satLon) {
+            // Highlight if current SatLon and Beam matches
+            const uniqueBeamId = `${beamData.satelliteId}-${beamData.beamId}`;
+            const currentSatLon = getLatLon().satLon;
+            
+            // Find the unique ID of the currently selected satellite/beam
+            const selectedBeamData = Object.values(allBeamsData).find(b => 
+                b.longitude === currentSatLon && b.satelliteId === satLonEl.value
+            );
+            const currentSelectedUniqueId = selectedBeamData ? `${selectedBeamData.satelliteId}-${selectedBeamData.beamId}` : null;
+            
+            if (currentSelectedUniqueId === uniqueBeamId) {
                 li.classList.add('selected');
+            } else {
+                li.classList.remove('selected');
             }
 
             if (blockZones) {
@@ -1775,12 +1807,12 @@ ${carriersInfo}
         
         if (visibleSatellitesList.children.length <= 1) {
           const noSatellitesMessage = document.createElement('p');
-          noSatellitesMessage.textContent = 'No unblocked satellites found.';
+          noSatellitesMessage.textContent = 'No unblocked beams found.';
           visibleSatellitesList.appendChild(noSatellitesMessage);
         }
         if (blockedSatellitesList.children.length <= 1) {
           const noSatellitesMessage = document.createElement('p');
-          noSatellitesMessage.textContent = 'No blocked satellites found.';
+          noSatellitesMessage.textContent = 'No blocked beams found.';
           blockedSatellitesList.appendChild(noSatellitesMessage);
         }
     }
@@ -1788,10 +1820,22 @@ ${carriersInfo}
     function highlightListItem(item, listId) {
         const list = document.getElementById(listId);
         if (list) {
+            // Only remove highlights in the list where the item is being clicked/highlighted
             Array.from(list.children).forEach(child => {
                 child.classList.remove('selected');
             });
             item.classList.add('selected');
+        }
+        // Also ensure the other list is deselected correctly
+        const otherListId = listId === 'visibleSatellites' ? 'blockedSatellites' : 'visibleSatellites';
+        const otherList = document.getElementById(otherListId);
+        if (otherList) {
+             Array.from(otherList.children).forEach(child => {
+                // Find the corresponding item in the other list to deselect it
+                if (child.innerHTML === item.innerHTML) {
+                    child.classList.remove('selected');
+                }
+            });
         }
     }
 
