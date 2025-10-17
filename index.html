@@ -197,11 +197,6 @@
     gap: 20px;
     width: 100%;
   }
-  .side-by-side-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
   #mapid {
     width: 100%;
     height: 600px;
@@ -861,6 +856,8 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
   updateAll();
 }
     addBlockBtn.addEventListener("click", () => createZoneRow());
+    
+    // --- MODIFIED FUNCTION: normalizeInput for 0-180 E/W enforcement ---
     function normalizeInput(input, max) {
         let val = (input.value || "").trim().replace(",", ".");
         if (val === "") return;
@@ -868,18 +865,40 @@ function createZoneRow(start = 0.00, stop = 0.00, elBlock = 10) {
         if (isNaN(num)) return;
 
         if (input.id === "azCurrent" || input.id === "elCurrent") {
-            // No min/max for current trim values, only format as integer
             input.value = Math.round(num);
         } else if (input.id === "azGreen" || input.id === "elGreen") {
-            // No min/max for RX Green values, only format
+            input.value = formatNumber(num);
+        } else if (input.id === "heading") {
+            if (num < 0) num = 0;
+            if (num > 360) num = 360;
+            input.value = formatNumber(num);
+        } else if (input.id === "lat") {
+            if (num < 0) num = 0;
+            if (num > 90) num = 90; // Latitude limit
             input.value = formatNumber(num);
         } else {
-            // Apply min/max for other inputs
-            if (num > max) num = max;
-            if (num < 0) num = 0;
-            input.value = formatNumber(num);
+            // Longitude/SatLon normalization (0 to 180 E/W)
+            let dirSelect = input.id === "lon" ? lonDir : satLonDir;
+            let dir = dirSelect.value;
+
+            // 1. Convert to a magnitude
+            let mag = Math.abs(num);
+
+            // 2. Clamp magnitude to 360
+            mag = mag % 360;
+
+            // 3. Apply 180-degree folding and direction reversal
+            if (mag > 180) {
+                mag = 360 - mag;
+                // Reverse direction (E <-> W)
+                dirSelect.value = (dir === "E") ? "W" : "E";
+            }
+            
+            // 4. Update input field
+            input.value = formatNumber(mag);
         }
     }
+    // --- END MODIFIED FUNCTION ---
 
     function getLatLon() {
       const latVal = parseFloat((latEl.value || "").trim().replace(",", ".")) || 0;
@@ -1033,10 +1052,10 @@ if (blockZones) {
       return new Promise(resolve => {
         navigator.geolocation.getCurrentPosition(pos => {
           const c = pos.coords;
-          latEl.value = formatNumber(Math.abs(c.latitude));
-          latDir.value = c.latitude >= 0 ? "N" : "S";
-          lonEl.value = formatNumber(Math.abs(c.longitude));
-          lonDir.value = c.longitude >= 0 ? "E" : "W";
+          
+          // Use the helper to update coordinates, ensuring normalization
+          updateCoordinatesFromMapClick(c.latitude, c.longitude);
+
           updateAll();
           resolve();
         }, err => {
@@ -1083,31 +1102,65 @@ pdfBtn.addEventListener("click", () => {
 
 
 	
+    // Apply normalization on input blur/change
     [latEl, lonEl, satLonEl].forEach(inp => {
       inp.addEventListener("blur", () => {
-        normalizeInput(inp, 180);
+        normalizeInput(inp, 180); // 180 max is for degrees magnitude
         updateAll();
       });
       inp.addEventListener("input", updateAll);
       inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
     });
+    [latDir, lonDir, satLonDir].forEach(sel => sel.addEventListener("change", () => {
+        // Re-run normalization and update to handle direction change
+        normalizeInput(lonEl.id === 'lon' ? lonEl : satLonEl, 180);
+        updateAll();
+    }));
+    
     headingEl.addEventListener("blur", () => {
       normalizeInput(headingEl, 360);
       updateAll();
     });
     headingEl.addEventListener("input", updateAll);
     headingEl.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
-    [latDir, lonDir, satLonDir].forEach(sel => sel.addEventListener("change", updateAll));
     
     // Listeners for the new trim table inputs
     [azGreenEl, azCurrentEl, elGreenEl, elCurrentEl].forEach(inp => {
         inp.addEventListener("input", updateAll);
         inp.addEventListener("blur", () => {
-            normalizeInput(inp, 360); // Max value is not relevant for trim, but kept for consistency
+            // Trim values don't use 0-180 E/W conversion, keep original check
+            normalizeInput(inp, 360); 
             updateAll();
         });
         inp.addEventListener("focus", e => setTimeout(() => e.target.select(), 0));
     });
+
+    // --- NEW HELPER FUNCTION for map clicks (includes normalization) ---
+    function updateCoordinatesFromMapClick(lat, lon) {
+        // 1. Latitude conversion (simple absolute value and direction)
+        latEl.value = formatNumber(Math.abs(lat));
+        latDir.value = lat >= 0 ? "N" : "S";
+
+        // 2. Longitude conversion (360-degree wrapping for display standard)
+        // Ensure the raw longitude is treated correctly for wrapping logic
+        let rawLon = lon;
+        let lonDirection = rawLon >= 0 ? "E" : "W";
+        let absLon = Math.abs(rawLon);
+
+        let normalizedLon = absLon;
+        if (absLon > 180) {
+            // Apply 180-degree folding and direction reversal
+            normalizedLon = 360 - absLon;
+            lonDirection = (lonDirection === "E") ? "W" : "E";
+        }
+        
+        // Final normalization to ensure 180 is not displayed as 0 and vice-versa
+        if (normalizedLon === 360) normalizedLon = 0;
+        
+        lonEl.value = formatNumber(normalizedLon);
+        lonDir.value = lonDirection;
+    }
+    // --- END NEW HELPER FUNCTION ---
 
     function computeSatRangesForZone(startAZ, stopAZ, lat, lon, heading, step = 1) {
       const start = (startAZ + 360) % 360;
@@ -1325,33 +1378,41 @@ pdfBtn.addEventListener("click", () => {
     window.addEventListener("resize", updateAll);
 
     // --- Leaflet Map and Plotter Functionality ---
-    let mymap = L.map('mapid').setView([0, 0], 2);
-    let userMarker = null;
+    
+    // NOTE: Removed WORLD_MAX_BOUNDS and related restrictions for infinite horizontal scroll
+
+    let mymap = L.map('mapid', {
+        bounceAtZoomLimits: false 
+    }).setView([0, 0], 2);
+
+    // Variable to hold the marker and its duplicates
+    let userMarkerGroup = L.layerGroup().addTo(mymap);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    }).addTo(mymap);
+
+    // To ensure the map centers on the prime meridian copy initially
+    if (mymap && mymap.getContainer()) {
+        mymap.panTo([0, 0]);
+    }
+    
+    let userMarker = null; // The primary marker instance
     let legendControl;
     let allBeamsData = {};
     let layersMap = new Map();
     const satDropdown = document.getElementById('satDropdown');
     let colorMap = {};
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-    }).addTo(mymap);
     
     mymap.on('click', function(e) {
       const newLat = e.latlng.lat;
       const newLon = e.latlng.lng;
 
-      if (userMarker) {
-        userMarker.setLatLng([newLat, newLon]);
-      } else {
-        userMarker = L.marker([newLat, newLon]).addTo(mymap);
-      }
-      
-      latEl.value = formatNumber(Math.abs(newLat));
-      latDir.value = newLat >= 0 ? "N" : "S";
-      lonEl.value = formatNumber(Math.abs(newLon));
-      lonDir.value = newLon >= 0 ? "E" : "W";
+      // --- FIX: Use helper function to normalize coordinates from map click ---
+      updateCoordinatesFromMapClick(newLat, newLon);
+      // -----------------------------------------------------------------------
 
       updateAll();
     });
@@ -1528,7 +1589,12 @@ pdfBtn.addEventListener("click", () => {
                     const addPolygonLayer = (points, shift) => {
                         const shiftedPoints = points.map(p => [p[0], p[1] + shift]);
                         const latlngs = shiftedPoints.map(point => [point[0], point[1]]);
-                        return L.polygon(latlngs, { color: beamColor, isContour: true }).bindPopup(popupContent);
+                        
+                        // --- FIX: Removed .bindPopup(popupContent) to prevent automatic popup on map click ---
+                        const layer = L.polygon(latlngs, { color: beamColor, isContour: true });
+                        L.DomEvent.disableClickPropagation(layer);
+                        // ----------------------------------------------------------------------------------
+                        return layer;
                     };
 
                     // 3. Add the primary, corrected polygon (0 shift)
@@ -1538,28 +1604,38 @@ pdfBtn.addEventListener("click", () => {
                     const minLon = antimeridianFixedPoints.reduce((min, p) => Math.min(min, p[1]), Infinity);
                     const maxLon = antimeridianFixedPoints.reduce((max, p) => Math.max(max, p[1]), -Infinity);
                     
-                    // If the polygon spans close to the 180/-180 line, or is wide enough to show on copies.
-                    // A simple heuristic: if the polygon uses longitudes near +/-180.
-                    const isNearAntimeridian = minLon < -160 || maxLon > 160;
+                    // A heuristic: if the polygon spans close to the 180/-180 line, or is wide enough to show on copies.
+                    const isNearAntimeridian = minLon < -160 || maxLon > 160 || (maxLon - minLon) > 300;
 
                     if (isNearAntimeridian) {
-                        // Add left copy (-360 shift)
-                        layers.push(addPolygonLayer(antimeridianFixedPoints, -360));
-                        // Add right copy (+360 shift)
-                        layers.push(addPolygonLayer(antimeridianFixedPoints, 360));
+                        // Add duplication for multiple world copies for infinite scroll effect
+                        const shiftBase = [360, 720, 1080];
+                        shiftBase.forEach(shift => {
+                            layers.push(addPolygonLayer(antimeridianFixedPoints, -shift));
+                            layers.push(addPolygonLayer(antimeridianFixedPoints, shift));
+                        });
                     }
                     
                 } else if (contour.type === 0 && contour.center && contour.radius) {
                     // Circles don't require complex antimeridian handling like polygons
                     const centerLatlng = [contour.center[0], contour.center[1]];
+                    // --- FIX: Removed .bindPopup(popupContent) to prevent automatic popup on map click ---
                     const layer = L.circle(centerLatlng, {
                         color: beamColor,
                         fillColor: beamColor,
                         fillOpacity: 0.5,
                         radius: contour.radius * 1000,
                         isContour: true
-                    }).bindPopup(popupContent);
+                    });
+                    // ----------------------------------------------------------------------------------
                     layers.push(layer);
+                    
+                    // Duplicate circles for infinite map copies:
+                    const shiftBase = [360, 720, 1080];
+                    shiftBase.forEach(shift => {
+                        layers.push(L.circle([contour.center[0], contour.center[1] - shift], { color: beamColor, fillColor: beamColor, fillOpacity: 0.5, radius: contour.radius * 1000, isContour: true }));
+                        layers.push(L.circle([contour.center[0], contour.center[1] + shift], { color: beamColor, fillColor: beamColor, fillOpacity: 0.5, radius: contour.radius * 1000, isContour: true }));
+                    });
                 }
             });
             const layerGroup = L.layerGroup(layers);
@@ -1602,8 +1678,7 @@ pdfBtn.addEventListener("click", () => {
                 });
                 
                 // 3. Check for visibility against the central, +360, and -360 versions of the polygon.
-                // We check up to three versions of the user's location to see if it falls into the polygon's corrected range.
-                const potentialUserLons = [userLon, userLon + 360, userLon - 360];
+                const potentialUserLons = [userLon, userLon + 360, userLon - 360, userLon + 720, userLon - 720];
                 
                 for (const shiftedUserLon of potentialUserLons) {
                     // Check if the shifted user longitude falls within the polygon's corrected longitude span, plus a tolerance for the actual intersection test.
@@ -1620,9 +1695,20 @@ pdfBtn.addEventListener("click", () => {
                 
             } else if (contour.type === 0 && contour.center && contour.radius) {
                 const center = { lat: contour.center[0], lng: contour.center[1] };
-                const distance = mymap.distance(L.latLng(userPoint.lat, userPoint.lng), L.latLng(center.lat, center.lng));
-                if (distance <= contour.radius * 1000) {
-                    isUserInFootprint = true;
+                
+                // For circles, we check multiple wraps for the center point to see if the user is in the circle on any map copy.
+                const userLat = userPoint.lat;
+                const userLon = userPoint.lng;
+                const centerLons = [center.lng, center.lng + 360, center.lng - 360, center.lng + 720, center.lng - 720];
+                const radiusM = contour.radius * 1000;
+                
+                for (const centerLon of centerLons) {
+                    const checkCenter = L.latLng(center.lat, centerLon);
+                    const currentDistance = mymap.distance(L.latLng(userLat, userLon), checkCenter);
+                    if (currentDistance <= radiusM) {
+                        isUserInFootprint = true;
+                        break;
+                    }
                 }
             }
         });
@@ -1653,7 +1739,7 @@ ${carriersInfo}
       const { lat, lon } = getLatLon();
       const userPoint = { lat: lat, lng: lon };
       
-      satDropdown.innerHTML = '<option value="">Select a visible satellite</option>';
+      satDropdown.innerHTML = '<option><option value="">Select a visible satellite</option></option>';
       
       const visibleBeams = Object.values(allBeamsData).filter(beamData => 
         checkFootprintVisibility(beamData, userPoint)
@@ -1684,35 +1770,48 @@ ${carriersInfo}
       });
     }
 
-function buildLegendAndMap() {
+    function buildLegendAndMap() {
         if (legendControl) {
             mymap.removeControl(legendControl);
         }
 
         const { lat, lon } = getLatLon();
-        const userPoint = { lat: lat, lng: lon };
+        const userPoint = L.latLng(lat, lon); // Convert to LatLng object once for convenience
         
+        // --- FIX: Extract userLat and userLon for marker creation ---
+        const userLat = userPoint.lat;
+        const userLon = userPoint.lng;
+        // -------------------------------------------------------------
+
         // Get the current map zoom level before setting the new center
         const currentZoom = mymap.getZoom(); 
+
+        // 1. CLEAR AND UPDATE USER MARKERS (New logic for marker duplication for infinite scroll)
+        userMarkerGroup.clearLayers();
+
+        // Add the primary marker (needed for updating coordinates later)
+        if (!userMarker) {
+             userMarker = L.marker([userLat, userLon]);
+        }
+        userMarker.setLatLng(userPoint);
+        userMarkerGroup.addLayer(userMarker);
+
+        // Add marker duplicates for infinite world wrapping
+        const shiftBase = [360, 720, 1080];
+        shiftBase.forEach(shift => {
+            userMarkerGroup.addLayer(L.marker(L.latLng(userLat, userLon + shift)));
+            userMarkerGroup.addLayer(L.marker(L.latLng(userLat, userLon - shift)));
+        });
         
+        // 2. CLEAR AND UPDATE BEAM LAYERS
         Object.keys(allBeamsData).forEach(id => {
             if (mymap.hasLayer(allBeamsData[id].layer)) {
                 mymap.removeLayer(allBeamsData[id].layer);
             }
         });
         
-        if (userMarker) {
-            userMarker.setLatLng([lat, lon]);
-        } else {
-            // Set the view for the first time with default zoom 5
-            mymap.setView([lat, lon], 5); 
-            userMarker = L.marker([lat, lon]).addTo(mymap);
-        }
-        
-        // --- MODIFIED LINE ---
-        // For subsequent calls, use the captured current zoom level
+        // 3. SET MAP VIEW
         mymap.setView([lat, lon], currentZoom); 
-        // ---------------------
 
         const uniqueBeamIds = Object.keys(allBeamsData).sort((a, b) => {
             const lonA = allBeamsData[a].longitude;
@@ -1721,12 +1820,11 @@ function buildLegendAndMap() {
         });
 
         if (uniqueBeamIds.length === 0) {
-            // Use current zoom for 0 beams case as well
-            mymap.setView([lat, lon], currentZoom); 
             showBeamDetails(null);
             return;
         }
 
+        // 4. BUILD LEGEND AND SET DEFAULT CHECKED STATE
         legendControl = L.control({position: 'bottomright'});
         legendControl.onAdd = function (map) {
             const div = L.DomUtil.create('div', 'info legend');
@@ -1776,6 +1874,9 @@ function buildLegendAndMap() {
                 const isVisible = checkFootprintVisibility(beamData, userPoint);
 
                 if (isVisible) {
+                    // --- MODIFIED LOGIC: Set isChecked to true if visible for default display ---
+                    beamData.isChecked = true;
+
                     const item = document.createElement('div');
                     item.className = 'legend-item';
 
@@ -1809,10 +1910,9 @@ function buildLegendAndMap() {
 
                     div.appendChild(item);
 
-                    if (beamData.isChecked) {
-                        if (!mymap.hasLayer(beamData.layer)) {
-                            mymap.addLayer(beamData.layer);
-                        }
+                    // --- MODIFIED LOGIC: Add layer to map if visible (checked by default) ---
+                    if (beamData.isChecked && !mymap.hasLayer(beamData.layer)) {
+                        mymap.addLayer(beamData.layer);
                     }
                 }
             });
@@ -1821,10 +1921,6 @@ function buildLegendAndMap() {
             return div;
         };
         legendControl.addTo(mymap);
-        
-        // This line is now redundant and can be removed/commented out or kept as the initial setView when the map loads, but
-        // it is overridden by the check above. Keeping it here for safety as it was part of the original logic.
-        // mymap.setView([lat, lon], 5); 
     }
     
     function generateColors(num) {
