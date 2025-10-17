@@ -1381,6 +1381,46 @@ pdfBtn.addEventListener("click", () => {
     function formatLongitude(longitude) {
         return `${Math.abs(longitude)}°${longitude >= 0 ? 'E' : 'W'}`;
     }
+
+    // --- CORRECTED FUNCTION: Antimeridian Fix (Used for Drawing and Visibility Check) ---
+    function handleAntimeridianCrossing(points) {
+      if (!points || points.length < 2) return points;
+
+      let newPoints = [];
+      // The first point is added as is.
+      newPoints.push([points[0][0], points[0][1]]); 
+
+      for (let i = 1; i < points.length; i++) {
+          const currentLat = points[i][0];
+          const currentLon = points[i][1];
+          
+          // The last added longitude in the adjusted list.
+          const prevAdjLon = newPoints[i - 1][1]; 
+          
+          // Get the raw longitude of the previous point to calculate the difference.
+          const prevRawLon = points[i - 1][1];
+          let diff = currentLon - prevRawLon;
+          
+          let newLon;
+
+          // Adjust diff to represent the shortest path between the two points in raw coordinates.
+          // We apply the correction to the 'diff' itself first.
+          if (diff > 180) {
+              diff -= 360;
+          } else if (diff < -180) {
+              diff += 360;
+          }
+          
+          // The new adjusted longitude for the current point is the previous adjusted longitude plus the *true* difference (shortest distance).
+          newLon = prevAdjLon + diff;
+
+          // The current point needs to be added with its corrected longitude.
+          newPoints.push([currentLat, newLon]);
+      }
+      
+      return newPoints;
+    }
+    // --- END CORRECTED FUNCTION ---
     
     function handleFileSelect(event) {
       const file = event.target.files[0];
@@ -1478,21 +1518,47 @@ pdfBtn.addEventListener("click", () => {
             `;
             
             beamData.contours.forEach(contour => {
-                let layer;
+                // Determine if a contour exists and whether it's a polygon or circle
                 if (contour.type === 1 && contour.points) {
-                    const latlngs = contour.points.map(point => [point[0], point[1]]);
-                    layer = L.polygon(latlngs, {color: beamColor, isContour: true}).bindPopup(popupContent);
+                    
+                    // 1. Get the Antimeridian-corrected base polygon points
+                    const antimeridianFixedPoints = handleAntimeridianCrossing(contour.points);
+                    
+                    // 2. Function to create and add the polygon layer for a given shift
+                    const addPolygonLayer = (points, shift) => {
+                        const shiftedPoints = points.map(p => [p[0], p[1] + shift]);
+                        const latlngs = shiftedPoints.map(point => [point[0], point[1]]);
+                        return L.polygon(latlngs, { color: beamColor, isContour: true }).bindPopup(popupContent);
+                    };
+
+                    // 3. Add the primary, corrected polygon (0 shift)
+                    layers.push(addPolygonLayer(antimeridianFixedPoints, 0));
+                    
+                    // 4. Determine if duplication is needed for world wrapping
+                    const minLon = antimeridianFixedPoints.reduce((min, p) => Math.min(min, p[1]), Infinity);
+                    const maxLon = antimeridianFixedPoints.reduce((max, p) => Math.max(max, p[1]), -Infinity);
+                    
+                    // If the polygon spans close to the 180/-180 line, or is wide enough to show on copies.
+                    // A simple heuristic: if the polygon uses longitudes near +/-180.
+                    const isNearAntimeridian = minLon < -160 || maxLon > 160;
+
+                    if (isNearAntimeridian) {
+                        // Add left copy (-360 shift)
+                        layers.push(addPolygonLayer(antimeridianFixedPoints, -360));
+                        // Add right copy (+360 shift)
+                        layers.push(addPolygonLayer(antimeridianFixedPoints, 360));
+                    }
+                    
                 } else if (contour.type === 0 && contour.center && contour.radius) {
+                    // Circles don't require complex antimeridian handling like polygons
                     const centerLatlng = [contour.center[0], contour.center[1]];
-                    layer = L.circle(centerLatlng, {
+                    const layer = L.circle(centerLatlng, {
                         color: beamColor,
                         fillColor: beamColor,
                         fillOpacity: 0.5,
                         radius: contour.radius * 1000,
                         isContour: true
                     }).bindPopup(popupContent);
-                }
-                if (layer) {
                     layers.push(layer);
                 }
             });
@@ -1516,13 +1582,42 @@ pdfBtn.addEventListener("click", () => {
         return inside;
     }
 
+    // --- MODIFIED FUNCTION: checkFootprintVisibility ---
     function checkFootprintVisibility(beamData, userPoint) {
         let isUserInFootprint = false;
         beamData.contours.forEach(contour => {
             if (contour.type === 1 && contour.points) {
-                if (isPointInPolygon(userPoint, contour.points)) {
-                    isUserInFootprint = true;
+                // 1. Apply the Antimeridian fix to the polygon points
+                const correctedPoints = handleAntimeridianCrossing(contour.points);
+                
+                const userLat = userPoint.lat;
+                const userLon = userPoint.lng;
+                
+                // 2. Get min/max longitude of the corrected points
+                let minLon = Infinity;
+                let maxLon = -Infinity;
+                correctedPoints.forEach(p => {
+                    minLon = Math.min(minLon, p[1]);
+                    maxLon = Math.max(maxLon, p[1]);
+                });
+                
+                // 3. Check for visibility against the central, +360, and -360 versions of the polygon.
+                // We check up to three versions of the user's location to see if it falls into the polygon's corrected range.
+                const potentialUserLons = [userLon, userLon + 360, userLon - 360];
+                
+                for (const shiftedUserLon of potentialUserLons) {
+                    // Check if the shifted user longitude falls within the polygon's corrected longitude span, plus a tolerance for the actual intersection test.
+                    if (shiftedUserLon >= minLon - 1 && shiftedUserLon <= maxLon + 1) {
+                         const tempUserPoint = { lat: userLat, lng: shiftedUserLon };
+                         
+                         // Run the original point-in-polygon logic on the corrected points
+                         if (isPointInPolygon(tempUserPoint, correctedPoints)) {
+                             isUserInFootprint = true;
+                             break;
+                         }
+                    }
                 }
+                
             } else if (contour.type === 0 && contour.center && contour.radius) {
                 const center = { lat: contour.center[0], lng: contour.center[1] };
                 const distance = mymap.distance(L.latLng(userPoint.lat, userPoint.lng), L.latLng(center.lat, center.lng));
@@ -1533,7 +1628,8 @@ pdfBtn.addEventListener("click", () => {
         });
         return isUserInFootprint;
     }
-    
+    // --- END MODIFIED FUNCTION ---
+
     function showBeamDetails(beamData) {
         if (!beamData) {
             beamDetailsEl.innerHTML = '';
@@ -1588,13 +1684,16 @@ ${carriersInfo}
       });
     }
 
-    function buildLegendAndMap() {
+function buildLegendAndMap() {
         if (legendControl) {
             mymap.removeControl(legendControl);
         }
 
         const { lat, lon } = getLatLon();
         const userPoint = { lat: lat, lng: lon };
+        
+        // Get the current map zoom level before setting the new center
+        const currentZoom = mymap.getZoom(); 
         
         Object.keys(allBeamsData).forEach(id => {
             if (mymap.hasLayer(allBeamsData[id].layer)) {
@@ -1605,8 +1704,15 @@ ${carriersInfo}
         if (userMarker) {
             userMarker.setLatLng([lat, lon]);
         } else {
+            // Set the view for the first time with default zoom 5
+            mymap.setView([lat, lon], 5); 
             userMarker = L.marker([lat, lon]).addTo(mymap);
         }
+        
+        // --- MODIFIED LINE ---
+        // For subsequent calls, use the captured current zoom level
+        mymap.setView([lat, lon], currentZoom); 
+        // ---------------------
 
         const uniqueBeamIds = Object.keys(allBeamsData).sort((a, b) => {
             const lonA = allBeamsData[a].longitude;
@@ -1615,7 +1721,8 @@ ${carriersInfo}
         });
 
         if (uniqueBeamIds.length === 0) {
-            mymap.setView([lat, lon], 5);
+            // Use current zoom for 0 beams case as well
+            mymap.setView([lat, lon], currentZoom); 
             showBeamDetails(null);
             return;
         }
@@ -1715,7 +1822,9 @@ ${carriersInfo}
         };
         legendControl.addTo(mymap);
         
-        mymap.setView([lat, lon], 5);
+        // This line is now redundant and can be removed/commented out or kept as the initial setView when the map loads, but
+        // it is overridden by the check above. Keeping it here for safety as it was part of the original logic.
+        // mymap.setView([lat, lon], 5); 
     }
     
     function generateColors(num) {
